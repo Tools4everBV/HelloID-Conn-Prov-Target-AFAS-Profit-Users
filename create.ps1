@@ -15,7 +15,7 @@ $p = $person | ConvertFrom-Json;
 $auditMessage = "Profit account for person " + $p.DisplayName + " not created successfully";
 
 $personId = $p.custom.customField1; # Profit Employee Nummer
-$emailaddress = $p.Accounts.MicrosoftAzureAD.mail;
+$emailaddress = $p.Accounts.MicrosoftAzureAD.userPrincipalName;
 $userPrincipalName = $p.Accounts.MicrosoftAzureAD.userPrincipalName;
 
 try{
@@ -91,7 +91,7 @@ try{
         $body = $account | ConvertTo-Json -Depth 10
         $putUri = $BaseUri + "/connectors/" + $updateConnector
 
-        $putResponse = Invoke-RestMethod -Method Post -Uri $putUri -Body $body -ContentType "application/json;charset=utf-8" -Headers $Headers -UseBasicParsing
+        $postResponse = Invoke-RestMethod -Method Post -Uri $putUri -Body $body -ContentType "application/json;charset=utf-8" -Headers $Headers -UseBasicParsing
         $aRef = $($account.knUser.Values.'@UsId')
     }
     $success = $True;
@@ -103,7 +103,12 @@ try{
         $reader.BaseStream.Position = 0
         $reader.DiscardBufferedData()
         $errResponse = $reader.ReadToEnd();
-        $auditMessage = "  = ${errResponse}";
+        if($errResponse -like "*Aan de gekozen persoon is al een gebruiker gekoppeld*"){
+            $success = $True;
+            $auditMessage = "already linked to this person. Account not";
+        }else{
+            $auditMessage = "  = ${errResponse}";
+        }
     }else {
         $auditMessage = "  = General error";
     } 

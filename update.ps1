@@ -15,7 +15,7 @@ $aRef = $accountReference | ConvertFrom-Json;
 $auditMessage = "Profit account for person " + $p.DisplayName + " not updated successfully";
 
 $personId = $p.custom.customField1; # Profit Employee Nummer
-$emailaddress = $p.Accounts.MicrosoftAzureAD.mail;
+$emailaddress = $p.Accounts.MicrosoftAzureAD.userPrincipalName;
 $userPrincipalName = $p.Accounts.MicrosoftAzureAD.userPrincipalName;
 
 try{
