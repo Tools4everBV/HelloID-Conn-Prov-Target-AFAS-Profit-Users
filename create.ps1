@@ -11,7 +11,6 @@ if ([Net.ServicePointManager]::SecurityProtocol -notmatch "Tls12") {
 #Initialize default properties
 $success = $False;
 $p = $person | ConvertFrom-Json;
-$aRef = $accountReference | ConvertFrom-Json;
 $auditMessage = "Profit account for person " + $p.DisplayName + " not created successfully";
 
 $personId = $p.externalId;
