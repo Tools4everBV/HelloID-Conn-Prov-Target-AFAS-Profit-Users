@@ -14,76 +14,75 @@ $p = $person | ConvertFrom-Json;
 $aRef = $accountReference | ConvertFrom-Json;
 $auditMessage = "Profit account for person " + $p.DisplayName + " not updated successfully";
 
-$personId = $p.externalId;
+$personId = $p.custom.customField1; # Profit Employee Nummer
 $emailaddress = $p.Accounts.MicrosoftAzureAD.mail;
 $userPrincipalName = $p.Accounts.MicrosoftAzureAD.userPrincipalName;
 
-#Change mapping here
-$accountFields = [PSCustomObject]@{
-    # Mutatie code
-    'MtCd' = 1;
-    # Omschrijving
-    "Nm" = "Updated by HelloID Provisioning";
-
-    # E-mail
-    'EmAd'  = $emailaddress;
-    # UPN
-    'UPN' = $userPrincipalName;
-
-    <#
-    # Groep
-    'GrId' = "groep1";
-    # Groep omschrijving
-    'GrDs' = "Groep omschrijving1";
-    # Persoon code
-    "BcCo" = $persoonCode;
-    # Nieuwe gebruikerscode
-    "UsIdNew" = $userId;
-    # Profit Windows
-    "Awin" = $true;
-    # Connector
-    "Acon" = $true;
-    # Reservekopieen via commandline
-    "Abac" = $true;
-    # Commandline
-    "Acom" = $true;
-    # Outsite
-    "Site" = $true;
-        # Afwijkend e-mailadres
-    "XOEA" = "test1@a-mail.nl";
-    # InSite
-    "InSi" = $true;
-    # Voorkeur site
-    "InLn" = "1043"; # NL
-    # Meewerklicentie actieveren
-    "OcUs" = $false;
-    # AFAS Online Portal-beheerder
-    "PoMa" = $false;
-    # AFAS Accept
-    "AcUs" = $false;
-    #>
-}
-
 try{
-    if(-Not($dryRun -eq $True)){
-        $encodedToken = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($Token))
-        $authValue = "AfasToken $encodedToken"
-        $Headers = @{ Authorization = $authValue }
+    $encodedToken = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($Token))
+    $authValue = "AfasToken $encodedToken"
+    $Headers = @{ Authorization = $authValue }
 
-        $getUri = $BaseUri + "/connectors/" + $getConnector + "?filterfieldids=PersonId&filtervalues=$personId"
-        $getResponse = Invoke-RestMethod -Method Get -Uri $getUri -ContentType "application/json;charset=utf-8" -Headers $Headers -UseBasicParsing
+    $getUri = $BaseUri + "/connectors/" + $getConnector + "?filterfieldids=PersonId&filtervalues=$personId"
+    $getResponse = Invoke-RestMethod -Method Get -Uri $getUri -ContentType "application/json;charset=utf-8" -Headers $Headers -UseBasicParsing
 
-        $account = [PSCustomObject]@{
-            'KnUser' = @{
-                'Element' = @{
-                    '@UsId' = $getResponse.rows.UserId;
-                    'Fields' = $accountFields
+    # Change mapping here
+    $account = [PSCustomObject]@{
+        'KnUser' = @{
+            'Element' = @{
+                '@UsId' = $getResponse.rows.UserId;
+                'Fields' = @{
+                    # Mutatie code
+                    'MtCd' = 1;
+                    # Omschrijving
+                    "Nm" = "Updated by HelloID Provisioning";
+
+                    # E-mail
+                    'EmAd'  = $emailaddress;
+                    # UPN
+                    'UPN' = $userPrincipalName;
+
+                    <#
+                    # Groep
+                    'GrId' = "groep1";
+                    # Groep omschrijving
+                    'GrDs' = "Groep omschrijving1";
+                    # Persoon code
+                    "BcCo" = $persoonCode;
+                    # Nieuwe gebruikerscode
+                    "UsIdNew" = $userId;
+                    # Profit Windows
+                    "Awin" = $true;
+                    # Connector
+                    "Acon" = $true;
+                    # Reservekopieen via commandline
+                    "Abac" = $true;
+                    # Commandline
+                    "Acom" = $true;
+                    # Outsite
+                    "Site" = $true;
+                    # Afwijkend e-mailadres
+                    "XOEA" = "test1@a-mail.nl";
+                    # InSite
+                    "InSi" = $true;
+                    # Voorkeur site
+                    "InLn" = "1043"; # NL
+                    # Meewerklicentie actieveren
+                    "OcUs" = $false;
+                    # AFAS Online Portal-beheerder
+                    "PoMa" = $false;
+                    # AFAS Accept
+                    "AcUs" = $false;
+                    #>
                 }
             }
         }
+    }
 
+    if(-Not($dryRun -eq $True)){
         $body = $account | ConvertTo-Json -Depth 10
         $putUri = $BaseUri + "/connectors/" + $updateConnector
+
         $putResponse = Invoke-RestMethod -Method Put -Uri $putUri -Body $body -ContentType "application/json;charset=utf-8" -Headers $Headers -UseBasicParsing
     }
     $success = $True;

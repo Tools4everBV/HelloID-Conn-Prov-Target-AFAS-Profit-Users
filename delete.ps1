@@ -14,36 +14,32 @@ $p = $person | ConvertFrom-Json;
 $aRef = $accountReference | ConvertFrom-Json;
 $auditMessage = "Profit account for person " + $p.DisplayName + " not deleted successfully";
 
-$personId = $p.externalId;
-
-#Change mapping here
-$accountFields = [PSCustomObject]@{
-    # Mutatie code
-    'MtCd' = 2;
-    # Omschrijving
-    "Nm" = "Deleted by HelloID Provisioning";
-}
+$personId = $p.custom.customField1; # Profit Employee Nummer
 
 try{
-    if(-Not($dryRun -eq $True)){
-        $encodedToken = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($Token))
-        $authValue = "AfasToken $encodedToken"
-        $Headers = @{ Authorization = $authValue }
+   $encodedToken = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($Token))
+    $authValue = "AfasToken $encodedToken"
+    $Headers = @{ Authorization = $authValue }
 
+    $getUri = $BaseUri + "/connectors/" + $getConnector + "?filterfieldids=PersonId&filtervalues=$personId"
+    $getResponse = Invoke-RestMethod -Method Get -Uri $getUri -ContentType "application/json;charset=utf-8" -Headers $Headers -UseBasicParsing
 
-        $getUri = $BaseUri + "/connectors/" + $getConnector + "?filterfieldids=PersonId&filtervalues=$personId"
-        $getResponse = Invoke-RestMethod -Method Get -Uri $getUri -ContentType "application/json;charset=utf-8" -Headers $Headers -UseBasicParsing
-
-
-        $account = [PSCustomObject]@{
-            'KnUser' = @{
-                'Element' = @{
-                    '@UsId' = $getResponse.rows.UserId;
-                    'Fields' = $accountFields
+    # Change mapping here
+    $account = [PSCustomObject]@{
+        'KnUser' = @{
+            'Element' = @{
+                '@UsId' = $getResponse.rows.UserId;
+                'Fields' = @{
+                    # Mutatie code
+                    'MtCd' = 2;
+                    # Omschrijving
+                    "Nm" = "Deleted by HelloID Provisioning";
                 }
             }
         }
+    }
 
+    if(-Not($dryRun -eq $True)){
         $deleteUri = $BaseUri + "/connectors/" + $updateConnector + "/KnUser/@UsId,MtCd,GrId,GrDs,BcCo,UsIdNew,Nm,Awin,Acon,Abac,Acom,Site,EmAd,XOEA,InSi,Upn,InLn,OcUs,PoMa,AcUs/$($account.knUser.Values.'@UsId'),,,,,$($account.knUser.Values.Fields.MtCd),$($account.knUser.Values.Fields.Nm),false,false,false,false,false,,,false,,,false,false,false"
         $deleteResponse = Invoke-RestMethod -Method DELETE -Uri $deleteUri -ContentType "application/json;charset=utf-8" -Headers $Headers -UseBasicParsing
     }
