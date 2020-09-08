@@ -14,9 +14,11 @@ $p = $person | ConvertFrom-Json;
 $aRef = $accountReference | ConvertFrom-Json;
 $auditMessage = "Profit account for person " + $p.DisplayName + " not updated successfully";
 
-$personId = $p.custom.customField1; # Profit Employee Nummer
-$emailaddress = $p.Accounts.MicrosoftAzureAD.userPrincipalName;
+$personId = $p.custom.Nummer; # Profit Employee Nummer
+$emailaddress = $p.Accounts.MicrosoftAzureAD.mail;
 $userPrincipalName = $p.Accounts.MicrosoftAzureAD.userPrincipalName;
+
+$currentDate = (Get-Date).ToString("dd/MM/yyyy hh:mm:ss")
 
 try{
     $encodedToken = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($Token))
@@ -35,38 +37,46 @@ try{
                     # Mutatie code
                     'MtCd' = 1;
                     # Omschrijving
-                    "Nm" = "Updated by HelloID Provisioning";
+                    "Nm" = "Updated by HelloID Provisioning on $currentDate";
 
                     # E-mail
                     'EmAd'  = $emailaddress;
                     # UPN
-                    'UPN' = $userPrincipalName;
-
+                    'Upn' = $userPrincipalName;
+ 
                     <#
+                    # Persoon code
+                    "BcCo" = $getResponse.rows.nummer;
+                    # Nieuwe gebruikerscode
+                    "UsIdNew" = "$customerNr." + $personId;
+
+                    # Wachtwoord
+                    "Pw" = "GHJKL!!!23456gfdgf" # dummy pwd, not used, but required
+                    
+                    # Outsite
+                    "Site" = $false;
+                    # InSite
+                    "InSi" = $true;
+
                     # Groep
                     'GrId' = "groep1";
                     # Groep omschrijving
                     'GrDs' = "Groep omschrijving1";
-                    # Persoon code
-                    "BcCo" = $persoonCode;
-                    # Nieuwe gebruikerscode
-                    "UsIdNew" = $userId;
-                    # Profit Windows
-                    "Awin" = $true;
-                    # Connector
-                    "Acon" = $true;
-                    # Reservekopieen via commandline
-                    "Abac" = $true;
-                    # Commandline
-                    "Acom" = $true;
-                    # Outsite
-                    "Site" = $true;
+
                     # Afwijkend e-mailadres
                     "XOEA" = "test1@a-mail.nl";
-                    # InSite
-                    "InSi" = $true;
                     # Voorkeur site
                     "InLn" = "1043"; # NL
+
+                    # Profit Windows
+                    "Awin" = $false;
+                    # Connector
+                    "Acon" = $false;
+                    # Reservekopieen via commandline
+                    "Abac" = $false;
+                    # Commandline
+                    "Acom" = $false;
+
                     # Meewerklicentie actieveren
                     "OcUs" = $false;
                     # AFAS Online Portal-beheerder
