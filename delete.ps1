@@ -14,10 +14,12 @@ $p = $person | ConvertFrom-Json;
 $aRef = $accountReference | ConvertFrom-Json;
 $auditMessage = "Profit account for person " + $p.DisplayName + " not deleted successfully";
 
-$personId = $p.custom.customField1; # Profit Employee Nummer
+$personId = $p.custom.Nummer; # Profit Employee Nummer
+
+$currentDate = (Get-Date).ToString("dd/MM/yyyy hh:mm:ss")
 
 try{
-   $encodedToken = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($Token))
+    $encodedToken = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($Token))
     $authValue = "AfasToken $encodedToken"
     $Headers = @{ Authorization = $authValue }
 
@@ -33,7 +35,7 @@ try{
                     # Mutatie code
                     'MtCd' = 2;
                     # Omschrijving
-                    "Nm" = "Deleted by HelloID Provisioning";
+                    "Nm" = "Deleted by HelloID Provisioning on $currentDate";
                 }
             }
         }
