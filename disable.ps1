@@ -14,7 +14,9 @@ $p = $person | ConvertFrom-Json;
 $aRef = $accountReference | ConvertFrom-Json;
 $auditMessage = "Profit account for person " + $p.DisplayName + " not disabled successfully";
 
-$personId = $p.custom.customField1; # Profit Employee Nummer
+$personId = $p.custom.Nummer; # Profit Employee Nummer
+
+$currentDate = (Get-Date).ToString("dd/MM/yyyy hh:mm:ss")
 
 try{
     $encodedToken = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($Token))
@@ -33,7 +35,36 @@ try{
                     # Mutatie code
                     'MtCd' = 2;
                     # Omschrijving
-                    "Nm" = "Enabled by HelloID Provisioning";
+                    "Nm" = "Disabled by HelloID Provisioning on $currentDate";
+ 
+                    # Outsite
+                    #"Site" = $false;
+                    # InSite
+                    "InSi" = $false;
+
+                    <#
+                    # Persoon code
+                    "BcCo" = $getResponse.rows.nummer;
+                    # Nieuwe gebruikerscode
+                    "UsIdNew" = "$customerNr." + $personId;
+
+                    # UPN
+                    'Upn' = $userPrincipalName;
+                    # E-mail
+                    'EmAd'  = $emailaddress;
+
+                    # Wachtwoord
+                    "Pw" = "GHJKL!!!23456gfdgf" # dummy pwd, not used, but required
+
+                    # Groep
+                    'GrId' = "groep1";
+                    # Groep omschrijving
+                    'GrDs' = "Groep omschrijving1";
+
+                    # Afwijkend e-mailadres
+                    "XOEA" = "test1@a-mail.nl";
+                    # Voorkeur site
+                    "InLn" = "1043"; # NL
 
                     # Profit Windows
                     "Awin" = $false;
@@ -44,35 +75,12 @@ try{
                     # Commandline
                     "Acom" = $false;
 
-                    # Outsite
-                    "Site" = $false;
-                    # InSite
-                    "InSi" = $false;
-
                     # Meewerklicentie actieveren
                     "OcUs" = $false;
                     # AFAS Online Portal-beheerder
                     "PoMa" = $false;
                     # AFAS Accept
                     "AcUs" = $false;
-
-                    <#
-                    # Groep
-                    'GrId' = "groep1";
-                    # Groep omschrijving
-                    'GrDs' = "Groep omschrijving1";
-                    # Persoon code
-                    "BcCo" = $persoonCode;
-                    # Nieuwe gebruikerscode
-                    "UsIdNew" = $userId;
-                    # E-mail
-                    'EmAd'  = $emailaddress;
-                    # Afwijkend e-mailadres
-                    "XOEA" = "test1@a-mail.nl";
-                    # UPN
-                    'UPN' = $userPrincipalName;
-                    # Voorkeur site
-                    "InLn" = "1043"; # NL
                     #>
                 }
             }
