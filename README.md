@@ -1,7 +1,4 @@
 # HelloID-Conn-Prov-Target-AFAS-Profit-Users
-This connector contains the AFAS Profit target based on the GET connectors 'T4E_IAM3_Persons' and 'T4E_IAM3_Users' and the UPDATE connector 'KnUser' for the HelloID provisioning module.
-
-# HelloID-Conn-Prov-Target-AFAS-Profit-Users
 <p align="center">
   <img src="https://user-images.githubusercontent.com/68013812/94159371-c1928f80-fe83-11ea-9582-1e4504da8282.png">
 </p>
