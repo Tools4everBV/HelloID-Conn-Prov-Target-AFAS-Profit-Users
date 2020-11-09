@@ -25,7 +25,7 @@ For this connector we have created a default set, which can be imported directly
 <!-- GETTING STARTED -->
 ## Getting Started
 
-By using this connector you will have the ability to create and update accounts from the AFAS Profit HR system.
+By using this connector you will have the ability to create, update and delete accounts from the AFAS Profit HR system.
 
 Connecting to Profit is done using the app connector system. 
 Please see the following pages from the AFAS Knowledge Base for more information.
