@@ -17,6 +17,8 @@ $aRef = $accountReference | ConvertFrom-Json;
 $auditMessage = "Profit account for person " + $p.DisplayName + " not enabled successfully";
 
 $personId = $p.ExternalId; # Profit Employee Nummer
+$emailaddress = $p.Accounts.MicrosoftActiveDirectory.userPrincipalName;
+$userPrincipalName = $p.Accounts.MicrosoftActiveDirectory.userPrincipalName;
 
 $currentDate = (Get-Date).ToString("dd/MM/yyyy hh:mm:ss")
 
