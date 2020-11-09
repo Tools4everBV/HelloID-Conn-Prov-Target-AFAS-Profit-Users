@@ -1,7 +1,9 @@
-$token = "<provide XML token here>"
-$baseUri = "https://<Provide Environment Id here>.rest.afas.online/profitrestservices";
-$getConnector = "T4E_IAM3_Users"
-$updateConnector = "KnUser"
+$config = ConvertFrom-Json $configuration
+
+$BaseUri = $config.BaseUri
+$Token = $config.Token
+$getConnector = "T4E_HelloID_Users"
+$updateConnector = "knUser"
 
 # Enable TLS 1.2
 if ([Net.ServicePointManager]::SecurityProtocol -notmatch "Tls12") {
@@ -14,7 +16,7 @@ $p = $person | ConvertFrom-Json;
 $aRef = $accountReference | ConvertFrom-Json;
 $auditMessage = "Profit account for person " + $p.DisplayName + " not enabled successfully";
 
-$personId = $p.custom.Nummer; # Profit Employee Nummer
+$personId = $p.ExternalId; # Profit Employee Nummer
 
 $currentDate = (Get-Date).ToString("dd/MM/yyyy hh:mm:ss")
 
@@ -23,65 +25,25 @@ try{
     $authValue = "AfasToken $encodedToken"
     $Headers = @{ Authorization = $authValue }
 
-    $getUri = $BaseUri + "/connectors/" + $getConnector + "?filterfieldids=PersonId&filtervalues=$personId"
+    $getUri = $BaseUri + "/connectors/" + $getConnector + "?filterfieldids=Persoonsnummer&filtervalues=$personId"
     $getResponse = Invoke-RestMethod -Method Get -Uri $getUri -ContentType "application/json;charset=utf-8" -Headers $Headers -UseBasicParsing
 
     # Change mapping here
     $account = [PSCustomObject]@{
         'KnUser' = @{
             'Element' = @{
-                '@UsId' = $getResponse.rows.UserId;
+                '@UsId' = $getResponse.rows.Gebruiker;
                 'Fields' = @{
                     # Mutatie code
                     'MtCd' = 6;
                     # Omschrijving
                     "Nm" = "Enabled by HelloID Provisioning on $currentDate";
-  
-                    # Outsite
-                    #"Site" = $false;
+
+                    # Persoon code
+                    "BcCo" = $getResponse.rows.Persoonsnummer;
+
                     # InSite
                     "InSi" = $true;
-
-                    <#
-                    # Persoon code
-                    "BcCo" = $getResponse.rows.nummer;
-                    # Nieuwe gebruikerscode
-                    "UsIdNew" = "$customerNr." + $personId;
-
-                    # UPN
-                    'Upn' = $userPrincipalName;
-                    # E-mail
-                    'EmAd'  = $emailaddress;
-
-                    # Wachtwoord
-                    "Pw" = "GHJKL!!!23456gfdgf" # dummy pwd, not used, but required
-
-                    # Groep
-                    'GrId' = "groep1";
-                    # Groep omschrijving
-                    'GrDs' = "Groep omschrijving1";
-
-                    # Afwijkend e-mailadres
-                    "XOEA" = "test1@a-mail.nl";
-                    # Voorkeur site
-                    "InLn" = "1043"; # NL
-
-                    # Profit Windows
-                    "Awin" = $false;
-                    # Connector
-                    "Acon" = $false;
-                    # Reservekopieen via commandline
-                    "Abac" = $false;
-                    # Commandline
-                    "Acom" = $false;
-
-                    # Meewerklicentie actieveren
-                    "OcUs" = $false;
-                    # AFAS Online Portal-beheerder
-                    "PoMa" = $false;
-                    # AFAS Accept
-                    "AcUs" = $false;
-                    #>
                 }
             }
         }
@@ -94,18 +56,10 @@ try{
         $putResponse = Invoke-RestMethod -Method Put -Uri $putUri -Body $body -ContentType "application/json;charset=utf-8" -Headers $Headers -UseBasicParsing
     }
     $success = $True;
-    $auditMessage = " successfully"; 
+    $auditMessage = " $($account.knUser.Values.'@UsId') successfully"; 
 }catch{
-    if(-Not($_.Exception.Response -eq $null)){
-        $result = $_.Exception.Response.GetResponseStream()
-        $reader = New-Object System.IO.StreamReader($result)
-        $reader.BaseStream.Position = 0
-        $reader.DiscardBufferedData()
-        $errResponse = $reader.ReadToEnd();
-        $auditMessage = " : ${errResponse}";
-    }else {
-        $auditMessage = " : General error";
-    } 
+    $errResponse = $_;
+    $auditMessage = " $($account.knUser.Values.'@UsId') : ${errResponse}";
 }
 
 #build up result
@@ -113,7 +67,7 @@ $result = [PSCustomObject]@{
     Success= $success;
     AccountReference= $aRef;
     AuditDetails=$auditMessage;
-    Account= $account;
+    Account= $account;  
 };
     
 Write-Output $result | ConvertTo-Json -Depth 10;
