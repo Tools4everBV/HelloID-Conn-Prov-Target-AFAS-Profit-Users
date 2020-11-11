@@ -29,27 +29,29 @@ try{
     $getUri = $BaseUri + "/connectors/" + $getConnector + "?filterfieldids=Persoonsnummer&filtervalues=$personId"
     $getResponse = Invoke-RestMethod -Method Get -Uri $getUri -ContentType "application/json;charset=utf-8" -Headers $Headers -UseBasicParsing
 
-    # Change mapping here
-    $account = [PSCustomObject]@{
-        'KnUser' = @{
-            'Element' = @{
-                '@UsId' = $getResponse.rows.Gebruiker;
-                'Fields' = @{
-                    # Mutatie code
-                    'MtCd' = 2;
-                    # Omschrijving
-                    "Nm" = "Deleted by HelloID Provisioning";
+    if($getResponse.rows.Count -eq 1 -and (![string]::IsNullOrEmpty($getResponse.rows.Gebruiker))){
+        # Change mapping here
+        $account = [PSCustomObject]@{
+            'KnUser' = @{
+                'Element' = @{
+                    '@UsId' = $getResponse.rows.Gebruiker;
+                    'Fields' = @{
+                        # Mutatie code
+                        'MtCd' = 2;
+                        # Omschrijving
+                        "Nm" = "Deleted by HelloID Provisioning";
+                    }
                 }
             }
         }
-    }
 
-    if(-Not($dryRun -eq $True)){
-        $deleteUri = $BaseUri + "/connectors/" + $updateConnector + "/KnUser/@UsId,MtCd,GrId,GrDs,BcCo,UsIdNew,Nm,Awin,Acon,Abac,Acom,Site,EmAd,XOEA,InSi,Upn,InLn,OcUs,PoMa,AcUs/$($account.knUser.Values.'@UsId'),,,,,$($account.knUser.Values.Fields.MtCd),$($account.knUser.Values.Fields.Nm),false,false,false,false,false,,,false,,,false,false,false"
-        $deleteResponse = Invoke-RestMethod -Method DELETE -Uri $deleteUri -ContentType "application/json;charset=utf-8" -Headers $Headers -UseBasicParsing
+        if(-Not($dryRun -eq $True)){
+            $deleteUri = $BaseUri + "/connectors/" + $updateConnector + "/KnUser/@UsId,MtCd,GrId,GrDs,BcCo,UsIdNew,Nm,Awin,Acon,Abac,Acom,Site,EmAd,XOEA,InSi,Upn,InLn,OcUs,PoMa,AcUs/$($account.knUser.Values.'@UsId'),,,,,$($account.knUser.Values.Fields.MtCd),$($account.knUser.Values.Fields.Nm),false,false,false,false,false,,,false,,,false,false,false"
+            $deleteResponse = Invoke-RestMethod -Method DELETE -Uri $deleteUri -ContentType "application/json;charset=utf-8" -Headers $Headers -UseBasicParsing
+        }
+        $success = $True;
+        $auditMessage = " $($account.knUser.Values.'@UsId') successfully";
     }
-    $success = $True;
-    $auditMessage = " $($account.knUser.Values.'@UsId') successfully"; 
 }catch{
     $errResponse = $_;
     $auditMessage = " $($account.knUser.Values.'@UsId') : ${errResponse}";
