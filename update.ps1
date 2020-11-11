@@ -30,70 +30,72 @@ try{
     $getUri = $BaseUri + "/connectors/" + $getConnector + "?filterfieldids=Persoonsnummer&filtervalues=$personId"
     $getResponse = Invoke-RestMethod -Method Get -Uri $getUri -ContentType "application/json;charset=utf-8" -Headers $Headers -UseBasicParsing
 
-    # Change mapping here
-    $account = [PSCustomObject]@{
-        'KnUser' = @{
-            'Element' = @{
-                '@UsId' = $getResponse.rows.Gebruiker;
-                'Fields' = @{
-                    # Mutatie code
-                    'MtCd' = 1;
-                    # Omschrijving
-                    "Nm" = "Updated by HelloID Provisioning on $currentDate";
+    if($getResponse.rows.Count -eq 1 -and (![string]::IsNullOrEmpty($getResponse.rows.Gebruiker))){
+        # Change mapping here
+        $account = [PSCustomObject]@{
+            'KnUser' = @{
+                'Element' = @{
+                    '@UsId' = $getResponse.rows.Gebruiker;
+                    'Fields' = @{
+                        # Mutatie code
+                        'MtCd' = 1;
+                        # Omschrijving
+                        "Nm" = "Updated by HelloID Provisioning on $currentDate";
 
-                    # Persoon code
-                    "BcCo" = $getResponse.rows.Persoonsnummer;
+                        # Persoon code
+                        "BcCo" = $getResponse.rows.Persoonsnummer;
 
-                    # E-mail
-                    'EmAd'  = $emailaddress;
-                    # UPN
-                    'Upn' = $userPrincipalName;
+                        # E-mail
+                        'EmAd'  = $emailaddress;
+                        # UPN
+                        'Upn' = $userPrincipalName;
 
-                    <#
-                    # Wachtwoord
-                    "Pw" = "GHJKL!!!23456gfdgf" # dummy pwd, not used, but required
-                    
-                    # Outsite
-                    "Site" = $false;
-                    # InSite
-                    "InSi" = $true;
-                    # Groep
-                    'GrId' = "groep1";
-                    # Groep omschrijving
-                    'GrDs' = "Groep omschrijving1";
-                    # Afwijkend e-mailadres
-                    "XOEA" = "test1@a-mail.nl";
-                    # Voorkeur site
-                    "InLn" = "1043"; # NL
-                    # Profit Windows
-                    "Awin" = $false;
-                    # Connector
-                    "Acon" = $false;
-                    # Reservekopieen via commandline
-                    "Abac" = $false;
-                    # Commandline
-                    "Acom" = $false;
-                    # Meewerklicentie actieveren
-                    "OcUs" = $false;
-                    # AFAS Online Portal-beheerder
-                    "PoMa" = $false;
-                    # AFAS Accept
-                    "AcUs" = $false;
-                    #>
+                        <#
+                        # Wachtwoord
+                        "Pw" = "GHJKL!!!23456gfdgf" # dummy pwd, not used, but required
 
+                        # Outsite
+                        "Site" = $false;
+                        # InSite
+                        "InSi" = $true;
+                        # Groep
+                        'GrId' = "groep1";
+                        # Groep omschrijving
+                        'GrDs' = "Groep omschrijving1";
+                        # Afwijkend e-mailadres
+                        "XOEA" = "test1@a-mail.nl";
+                        # Voorkeur site
+                        "InLn" = "1043"; # NL
+                        # Profit Windows
+                        "Awin" = $false;
+                        # Connector
+                        "Acon" = $false;
+                        # Reservekopieen via commandline
+                        "Abac" = $false;
+                        # Commandline
+                        "Acom" = $false;
+                        # Meewerklicentie actieveren
+                        "OcUs" = $false;
+                        # AFAS Online Portal-beheerder
+                        "PoMa" = $false;
+                        # AFAS Accept
+                        "AcUs" = $false;
+                        #>
+
+                    }
                 }
             }
         }
-    }
 
-    if(-Not($dryRun -eq $True)){
-        $body = $account | ConvertTo-Json -Depth 10
-        $putUri = $BaseUri + "/connectors/" + $updateConnector
+        if(-Not($dryRun -eq $True)){
+            $body = $account | ConvertTo-Json -Depth 10
+            $putUri = $BaseUri + "/connectors/" + $updateConnector
 
-        $putResponse = Invoke-RestMethod -Method Put -Uri $putUri -Body $body -ContentType "application/json;charset=utf-8" -Headers $Headers -UseBasicParsing
+            $putResponse = Invoke-RestMethod -Method Put -Uri $putUri -Body $body -ContentType "application/json;charset=utf-8" -Headers $Headers -UseBasicParsing
+        }
+        $success = $True;
+        $auditMessage = " $($account.knUser.Values.'@UsId') successfully"; 
     }
-    $success = $True;
-    $auditMessage = " $($account.knUser.Values.'@UsId') successfully"; 
 }catch{
     $errResponse = $_;
     $auditMessage = " $($account.knUser.Values.'@UsId') : ${errResponse}";
