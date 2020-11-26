@@ -42,8 +42,8 @@ try{
                         # Omschrijving
                         "Nm" = "Updated by HelloID Provisioning on $currentDate";
 
-                        # Persoon code
-                        "BcCo" = $getResponse.rows.Persoonsnummer;
+                        # Persoon code - Only specify this if you want to update the linked person - Make sure this has a value, otherwise the link will disappear
+                        # "BcCo" = $getResponse.rows.Persoonsnummer;  
 
                         # E-mail
                         'EmAd'  = $emailaddress;
