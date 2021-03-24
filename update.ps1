@@ -5,20 +5,22 @@ $Token = $config.Token
 $getConnector = "T4E_HelloID_Users"
 $updateConnector = "knUser"
 
-# Enable TLS 1.2
-if ([Net.ServicePointManager]::SecurityProtocol -notmatch "Tls12") {
-    [Net.ServicePointManager]::SecurityProtocol += [Net.SecurityProtocolType]::Tls12
-}
-
 #Initialize default properties
-$success = $False;
 $p = $person | ConvertFrom-Json;
+$pp = $previousPerson | ConvertFrom-Json
+$pd = $personDifferences | ConvertFrom-Json
+$m = $manager | ConvertFrom-Json;
 $aRef = $accountReference | ConvertFrom-Json;
-$auditMessage = "Profit account for person " + $p.DisplayName + " not enabled successfully";
+$mRef = $managerAccountReference | ConvertFrom-Json;
+$success = $False;
+$auditLogs = New-Object Collections.Generic.List[PSCustomObject];
+
+# Set TLS to accept TLS, TLS 1.1 and TLS 1.2
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls -bor [Net.SecurityProtocolType]::Tls11 -bor [Net.SecurityProtocolType]::Tls12
 
 $personId = $p.ExternalId; # Profit Employee Nummer
-$emailaddress = $p.Accounts.MicrosoftActiveDirectory.userPrincipalName;
-$userPrincipalName = $p.Accounts.MicrosoftActiveDirectory.userPrincipalName;
+$emailaddress = $p.Accounts.AzureADSchoulens.userPrincipalName + "1";
+$userPrincipalName = $p.Accounts.AzureADSchoulens.userPrincipalName + "1";
 
 $currentDate = (Get-Date).ToString("dd/MM/yyyy hh:mm:ss")
 
@@ -31,7 +33,22 @@ try{
     $getResponse = Invoke-RestMethod -Method Get -Uri $getUri -ContentType "application/json;charset=utf-8" -Headers $Headers -UseBasicParsing
 
     if($getResponse.rows.Count -eq 1 -and (![string]::IsNullOrEmpty($getResponse.rows.Gebruiker))){
-        # Change mapping here
+        # Retrieve current account data for properties to be updated
+        $previousAccount = [PSCustomObject]@{
+            'KnUser' = @{
+                'Element' = @{
+                    '@UsId' = $getResponse.rows.Gebruiker;
+                    'Fields' = @{
+                        # E-mail
+                        'EmAd'  = $getResponse.rows.Email_werk_gebruiker;
+                        # UPN
+                        'Upn' = $getResponse.rows.UPN;
+                    }
+                }
+            }
+        }
+        
+        # Map the properties to update
         $account = [PSCustomObject]@{
             'KnUser' = @{
                 'Element' = @{
@@ -41,51 +58,25 @@ try{
                         'MtCd' = 1;
                         # Omschrijving
                         "Nm" = "Updated by HelloID Provisioning on $currentDate";
-
-                        # Persoon code - Only specify this if you want to update the linked person - Make sure this has a value, otherwise the link will disappear
-                        # "BcCo" = $getResponse.rows.Persoonsnummer;  
-
-                        # E-mail
-                        'EmAd'  = $emailaddress;
-                        # UPN
-                        'Upn' = $userPrincipalName;
-
-                        <#
-                        # Wachtwoord
-                        "Pw" = "GHJKL!!!23456gfdgf" # dummy pwd, not used, but required
-
-                        # Outsite
-                        "Site" = $false;
-                        # InSite
-                        "InSi" = $true;
-                        # Groep
-                        'GrId' = "groep1";
-                        # Groep omschrijving
-                        'GrDs' = "Groep omschrijving1";
-                        # Afwijkend e-mailadres
-                        "XOEA" = "test1@a-mail.nl";
-                        # Voorkeur site
-                        "InLn" = "1043"; # NL
-                        # Profit Windows
-                        "Awin" = $false;
-                        # Connector
-                        "Acon" = $false;
-                        # Reservekopieen via commandline
-                        "Abac" = $false;
-                        # Commandline
-                        "Acom" = $false;
-                        # Meewerklicentie actieveren
-                        "OcUs" = $false;
-                        # AFAS Online Portal-beheerder
-                        "PoMa" = $false;
-                        # AFAS Accept
-                        "AcUs" = $false;
-                        #>
-
                     }
                 }
             }
         }
+
+        # If '$userPrincipalName' does not match current 'UPN', add 'UPN' to update body. AFAS will throw an error when trying to update this with the same value
+        if($getResponse.rows.UPN -ne $userPrincipalName){
+            # vulling UPN afstemmen met AFAS beheer
+            # UPN
+            $account.'KnUser'.'Element'.'Fields' += @{'Upn' = $userPrincipalName}
+            Write-Verbose -Verbose "Updating UPN '$($getResponse.rows.UPN)' with new value '$userPrincipalName'"
+        }
+
+        # If '$emailAdddres' does not match current 'EmAd', add 'EmAd' to update body. AFAS will throw an error when trying to update this with the same value
+        if($getResponse.rows.Email_werk_gebruiker -ne $emailaddress){
+            # E-mail
+            $account.'KnUser'.'Element'.'Fields' += @{'EmAd' = $emailaddress}
+            Write-Verbose -Verbose "Updating BusinessEmailAddress '$($getResponse.rows.Email_werk_gebruiker)' with new value '$emailaddress'"
+        }        
 
         if(-Not($dryRun -eq $True)){
             $body = $account | ConvertTo-Json -Depth 10
@@ -93,20 +84,37 @@ try{
 
             $putResponse = Invoke-RestMethod -Method Put -Uri $putUri -Body $body -ContentType "application/json;charset=utf-8" -Headers $Headers -UseBasicParsing
         }
-        $success = $True;
-        $auditMessage = " $($account.knUser.Values.'@UsId') successfully"; 
+
+        $auditLogs.Add([PSCustomObject]@{
+            Action = "UpdateAccount"
+            Message = "Updated fields of account  with Id $($aRef)"
+            IsError = $false;
+        });
+
+        $success = $true;  
     }
 }catch{
-    $errResponse = $_;
-    $auditMessage = " $($account.knUser.Values.'@UsId') : ${errResponse}";
+    $auditLogs.Add([PSCustomObject]@{
+        Action = "UpdateAccount"
+        Message = "Error updating fields of account with Id $($aRef): $($_)"
+        IsError = $True
+    });
+	Write-Error $_;
 }
 
-#build up result
+# Send results
 $result = [PSCustomObject]@{
-    Success= $success;
-    AccountReference= $aRef;
-    AuditDetails=$auditMessage;
-    Account= $account;  
+	Success= $success;
+	AccountReference= $aRef;
+	AuditLogs = $auditLogs;
+    Account = $account;
+    PreviousAccount = $previousAccount;   
+
+    # Optionally return data for use in other systems
+    ExportData = [PSCustomObject]@{
+        UserId                  = $($account.knUser.Values.'@UsId')
+        UPN                     = $($account.KnUser.Element.Fields.UPN)
+        BusinessEmailAddress    = $($account.KnUser.Element.Fields.EmAd)
+    };
 };
-    
 Write-Output $result | ConvertTo-Json -Depth 10;

@@ -5,19 +5,18 @@ $Token = $config.Token
 $getConnector = "T4E_HelloID_Users"
 $updateConnector = "knUser"
 
-# Enable TLS 1.2
-if ([Net.ServicePointManager]::SecurityProtocol -notmatch "Tls12") {
-    [Net.ServicePointManager]::SecurityProtocol += [Net.SecurityProtocolType]::Tls12
-}
-
 #Initialize default properties
-$success = $False;
 $p = $person | ConvertFrom-Json;
+$m = $manager | ConvertFrom-Json;
 $aRef = $accountReference | ConvertFrom-Json;
-$auditMessage = "Profit account for person " + $p.DisplayName + " not deleted successfully";
+$mRef = $managerAccountReference | ConvertFrom-Json;
+$success = $False;
+$auditLogs = New-Object Collections.Generic.List[PSCustomObject];
+
+# Set TLS to accept TLS, TLS 1.1 and TLS 1.2
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls -bor [Net.SecurityProtocolType]::Tls11 -bor [Net.SecurityProtocolType]::Tls12
 
 $personId = $p.ExternalId; # Profit Employee Nummer
-Write-Verbose -Verbose $personId
 
 $currentDate = (Get-Date).ToString("dd/MM/yyyy hh:mm:ss")
 
@@ -49,20 +48,29 @@ try{
             $deleteUri = $BaseUri + "/connectors/" + $updateConnector + "/KnUser/@UsId,MtCd,GrId,GrDs,BcCo,UsIdNew,Nm,Awin,Acon,Abac,Acom,Site,EmAd,XOEA,InSi,Upn,InLn,OcUs,PoMa,AcUs/$($account.knUser.Values.'@UsId'),,,,,$($account.knUser.Values.Fields.MtCd),$($account.knUser.Values.Fields.Nm),false,false,false,false,false,,,false,,,false,false,false"
             $deleteResponse = Invoke-RestMethod -Method DELETE -Uri $deleteUri -ContentType "application/json;charset=utf-8" -Headers $Headers -UseBasicParsing
         }
-        $success = $True;
-        $auditMessage = " $($account.knUser.Values.'@UsId') successfully";
+
+        $auditLogs.Add([PSCustomObject]@{
+            Action = "DeleteAccount"
+            Message = "Deleted account with Id $($aRef)"
+            IsError = $false;
+        });
+
+        $success = $true;    
     }
 }catch{
-    $errResponse = $_;
-    $auditMessage = " $($account.knUser.Values.'@UsId') : ${errResponse}";
+    $auditLogs.Add([PSCustomObject]@{
+        Action = "DeleteAccount"
+        Message = "Error deleting account with Id $($aRef): $($_)"
+        IsError = $True
+    });
+	Write-Error $_;
 }
 
-#build up result
+# Send results
 $result = [PSCustomObject]@{
-    Success= $success;
-    AccountReference= $aRef;
-    AuditDetails=$auditMessage;
-    Account= $account;  
+	Success= $success;
+	AccountReference= $aRef;
+	AuditLogs = $auditLogs;
+    Account = $account;
 };
-    
 Write-Output $result | ConvertTo-Json -Depth 10;

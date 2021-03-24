@@ -6,19 +6,20 @@ $RelationNumber = $config.RelationNumber
 $getConnector = "T4E_HelloID_Users"
 $updateConnector = "knUser"
 
-# Enable TLS 1.2
-if ([Net.ServicePointManager]::SecurityProtocol -notmatch "Tls12") {
-    [Net.ServicePointManager]::SecurityProtocol += [Net.SecurityProtocolType]::Tls12
-}
-
 #Initialize default properties
-$success = $False;
 $p = $person | ConvertFrom-Json;
-$auditMessage = "Profit account for person " + $p.DisplayName + " not created successfully";
+$m = $manager | ConvertFrom-Json;
+$aRef = $accountReference | ConvertFrom-Json;
+$mRef = $managerAccountReference | ConvertFrom-Json;
+$success = $False;
+$auditLogs = New-Object Collections.Generic.List[PSCustomObject];
+
+# Set TLS to accept TLS, TLS 1.1 and TLS 1.2
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls -bor [Net.SecurityProtocolType]::Tls11 -bor [Net.SecurityProtocolType]::Tls12
 
 $personId = $p.ExternalId; # Profit Employee Nummer
-$emailaddress = $p.Accounts.MicrosoftActiveDirectory.userPrincipalName;
-$userPrincipalName = $p.Accounts.MicrosoftActiveDirectory.userPrincipalName;
+$emailaddress = $p.Accounts.AzureADSchoulens.userPrincipalName  + "1";
+$userPrincipalName = $p.Accounts.AzureADSchoulens.userPrincipalName + "1";
 $userId = $RelationNumber + "." + $p.Custom.employeeNumber;
 
 $currentDate = (Get-Date).ToString("dd/MM/yyyy hh:mm:ss")
@@ -33,93 +34,86 @@ try{
 
     if($getResponse.rows.Count -eq 1 -and (![string]::IsNullOrEmpty($getResponse.rows.Gebruiker))){
         # Account already linked to this person. Updating account
+        
+        if($updateUserId -eq $true){
+            # If User ID doesn't match naming convention, update this
+            if($getResponse.rows.Gebruiker -ne $userId){
+                $account = [PSCustomObject]@{
+                    'KnUser' = @{
+                        'Element' = @{
+                            '@UsId' = $getResponse.rows.Gebruiker;
+                            'Fields' = @{
+                                # Mutatie code
+                                'MtCd' = 4;
+                                # Omschrijving
+                                "Nm" = "Updated User ID by HelloID Provisioning on $currentDate";
 
-        # If User ID doesn't match naming convention, update this
-        if($getResponse.rows.Gebruiker -ne $userId){
-            $account = [PSCustomObject]@{
-                'KnUser' = @{
-                    'Element' = @{
-                        '@UsId' = $getResponse.rows.Gebruiker;
-                        'Fields' = @{
-                            # Mutatie code
-                            'MtCd' = 4;
-                            # Omschrijving
-                            "Nm" = "Updated User ID by HelloID Provisioning on $currentDate";
+                                # Persoon code - Only specify this if you want to update the linked person - Make sure this has a value, otherwise the link will disappear
+                                # "BcCo" = $getResponse.rows.Persoonsnummer;  
 
-                            # Persoon code - Only specify this if you want to update the linked person - Make sure this has a value, otherwise the link will disappear
-                            # "BcCo" = $getResponse.rows.Persoonsnummer;  
-
-                             # Nieuwe gebruikerscode
-                            "UsIdNew" = $userId;    
+                                # Nieuwe gebruikerscode
+                                "UsIdNew" = $userId;    
+                            }
                         }
                     }
                 }
-            }
 
-            if(-Not($dryRun -eq $True)){
-                $body = $account | ConvertTo-Json -Depth 10
-                $putUri = $BaseUri + "/connectors/" + $updateConnector
+                if(-Not($dryRun -eq $True)){
+                    $body = $account | ConvertTo-Json -Depth 10
+                    $putUri = $BaseUri + "/connectors/" + $updateConnector
 
-                $putResponse = Invoke-RestMethod -Method Put -Uri $putUri -Body $body -ContentType "application/json;charset=utf-8" -Headers $Headers -UseBasicParsing -ErrorAction Stop
-                Write-Verbose -Verbose "UserId [$($getResponse.rows.Gebruiker)] updated to [$userId]"
+                    $putResponse = Invoke-RestMethod -Method Put -Uri $putUri -Body $body -ContentType "application/json;charset=utf-8" -Headers $Headers -UseBasicParsing -ErrorAction Stop
+                    Write-Verbose -Verbose "UserId [$($getResponse.rows.Gebruiker)] updated to [$userId]"
+                }
             }
         }
 
-        # Update AFAS account
+        # Retrieve current account data for properties to be updated
+        $previousAccount = [PSCustomObject]@{
+            'KnUser' = @{
+                'Element' = @{
+                    '@UsId' = $getResponse.rows.Gebruiker;
+                    'Fields' = @{
+                        # E-mail
+                        'EmAd'  = $getResponse.rows.Email_werk_gebruiker;
+                        # UPN
+                        'Upn' = $getResponse.rows.UPN;
+                    }
+                }
+            }
+        }
+        
+        # Map the properties to update
         $account = [PSCustomObject]@{
             'KnUser' = @{
                 'Element' = @{
-                    '@UsId' = $userId;
+                    '@UsId' = $getResponse.rows.Gebruiker;
                     'Fields' = @{
                         # Mutatie code
                         'MtCd' = 1;
                         # Omschrijving
                         "Nm" = "Updated by HelloID Provisioning on $currentDate";
-
-                        # Persoon code - Only specify this if you want to update the linked person - Make sure this has a value, otherwise the link will disappear
-                        # "BcCo" = $getResponse.rows.Persoonsnummer;  
-
-                        # E-mail
-                        'EmAd'  = $emailaddress;
-                        # vulling UPN afstemmen met AFAS beheer
-                        # UPN
-                        'Upn' = $userPrincipalName;
-
-                        # # Outsite
-                        "Site" = $false;
-                        # # InSite
-                        "InSi" = $true; 
-
-                        <#
-                        # Wachtwoord
-                        "Pw" = "GHJKL!!!23456gfdgf" # dummy pwd, not used, but required
-                        # Groep
-                        'GrId' = "groep1";
-                        # Groep omschrijving
-                        'GrDs' = "Groep omschrijving1";
-                        # Afwijkend e-mailadres
-                        "XOEA" = "test1@a-mail.nl";
-                        # Voorkeur site
-                        "InLn" = "1043"; # NL
-                        # Profit Windows
-                        "Awin" = $false;
-                        # Connector
-                        "Acon" = $false;
-                        # Reservekopieen via commandline
-                        "Abac" = $false;
-                        # Commandline
-                        "Acom" = $false;
-                        # Meewerklicentie actieveren
-                        "OcUs" = $false;
-                        # AFAS Online Portal-beheerder
-                        "PoMa" = $false;
-                        # AFAS Accept
-                        "AcUs" = $false;
-                        #>
                     }
                 }
             }
         }
+
+        # If '$userPrincipalName' does not match current 'UPN', add 'UPN' to update body. AFAS will throw an error when trying to update this with the same value
+        if($getResponse.rows.UPN -ne $userPrincipalName){
+            # vulling UPN afstemmen met AFAS beheer
+            # UPN
+            $account.'KnUser'.'Element'.'Fields' += @{'Upn' = $userPrincipalName}
+            Write-Verbose -Verbose "Updating UPN '$($getResponse.rows.UPN)' with new value '$userPrincipalName'"
+        }
+
+        # If '$emailAdddres' does not match current 'EmAd', add 'EmAd' to update body. AFAS will throw an error when trying to update this with the same value
+        if($getResponse.rows.Email_werk_gebruiker -ne $emailaddress){
+            # E-mail
+            $account.'KnUser'.'Element'.'Fields' += @{'EmAd' = $emailaddress}
+            Write-Verbose -Verbose "Updating BusinessEmailAddress '$($getResponse.rows.Email_werk_gebruiker)' with new value '$emailaddress'"
+        }                  
+
+        $aRef = $($account.knUser.Values.'@UsId')
 
         if(-Not($dryRun -eq $True)){
             $body = $account | ConvertTo-Json -Depth 10
@@ -127,10 +121,14 @@ try{
 
             $putResponse = Invoke-RestMethod -Method Put -Uri $putUri -Body $body -ContentType "application/json;charset=utf-8" -Headers $Headers -UseBasicParsing -ErrorAction Stop
         }
-            
-        $aRef = $($account.knUser.Values.'@UsId')
-        $success = $True;
-        $auditMessage = " $($account.knUser.Values.'@UsId') already exists for this person. Account updated instead of"; 
+        
+        $auditLogs.Add([PSCustomObject]@{
+            Action = "CreateAccount"
+            Message = "Correlated to and updated fields of account with id $aRef"
+            IsError = $false;
+        });
+
+        $success = $true;          
     }else{
         # Account doesn't exist this person. Creating account
 
@@ -154,7 +152,7 @@ try{
                         # E-mail
                         'EmAd'  = $emailaddress;
                         # UPN
-                        # 'Upn' = $userPrincipalName;
+                        'Upn' = $userPrincipalName;
 
                         # Profit Windows
                         "Awin" = $false;
@@ -201,34 +199,56 @@ try{
             }
         }
 
+        $aRef = $($account.knUser.Values.'@UsId')
+
         if(-Not($dryRun -eq $True)){
             $body = $account | ConvertTo-Json -Depth 10
             $postUri = $BaseUri + "/connectors/" + $updateConnector
 
             $postResponse = Invoke-RestMethod -Method Post -Uri $postUri -Body $body -ContentType "application/json;charset=utf-8" -Headers $Headers -UseBasicParsing -ErrorAction Stop
         }
-            
-        $aRef = $($account.knUser.Values.'@UsId')
-        $success = $True;
-        $auditMessage = " $($account.knUser.Values.'@UsId') successfully";         
+        
+        $auditLogs.Add([PSCustomObject]@{
+            Action = "CreateAccount"
+            Message = "Created account with Id $($aRef)"
+            IsError = $false;
+        });
+
+        $success = $true;          
     }
 }catch{
     $errResponse = $_;
     if($errResponse -like "*Aan de gekozen persoon is al een gebruiker gekoppeld*"){
-        $aRef = $($account.knUser.Values.'@UsId')            
-        $success = $True;
-        $auditMessage = " $($account.knUser.Values.'@UsId') already exists for this person. Skipped action and treated like";
+        $auditLogs.Add([PSCustomObject]@{
+            Action = "CreateAccount"
+            Message = "Correlated to account with id $aRef";
+            IsError = $false;
+        });        
+
+        $success = $true; 
     }else{
-        $auditMessage = " $($account.knUser.Values.'@UsId') : ${errResponse}";
+        $auditLogs.Add([PSCustomObject]@{
+            Action = "CreateAccount"
+            Message = "Error creating account with Id $($aRef): $($_)"
+            IsError = $True
+        });
+        Write-Error $_;
     }
 }
 
-#build up result
+# Send results
 $result = [PSCustomObject]@{
-    Success= $success;
-    AccountReference= $aRef;
-    AuditDetails=$auditMessage;
-    Account= $account;  
+	Success= $success;
+	AccountReference= $aRef;
+	AuditLogs = $auditLogs;
+    Account = $account;
+    PreviousAccount = $previousAccount;    
+
+    # Optionally return data for use in other systems
+    ExportData = [PSCustomObject]@{
+        UserId                  = $($account.knUser.Values.'@UsId')
+        UPN                     = $($account.KnUser.Element.Fields.UPN)
+        BusinessEmailAddress    = $($account.KnUser.Element.Fields.EmAd)
+    };    
 };
-    
 Write-Output $result | ConvertTo-Json -Depth 10;

@@ -5,16 +5,16 @@ $Token = $config.Token
 $getConnector = "T4E_HelloID_Users"
 $updateConnector = "knUser"
 
-# Enable TLS 1.2
-if ([Net.ServicePointManager]::SecurityProtocol -notmatch "Tls12") {
-    [Net.ServicePointManager]::SecurityProtocol += [Net.SecurityProtocolType]::Tls12
-}
-
 #Initialize default properties
-$success = $False;
 $p = $person | ConvertFrom-Json;
+$m = $manager | ConvertFrom-Json;
 $aRef = $accountReference | ConvertFrom-Json;
-$auditMessage = "Profit account for person " + $p.DisplayName + " not enabled successfully";
+$mRef = $managerAccountReference | ConvertFrom-Json;
+$success = $False;
+$auditLogs = New-Object Collections.Generic.List[PSCustomObject];
+
+# Set TLS to accept TLS, TLS 1.1 and TLS 1.2
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls -bor [Net.SecurityProtocolType]::Tls11 -bor [Net.SecurityProtocolType]::Tls12
 
 $personId = $p.ExternalId; # Profit Employee Nummer
 
@@ -56,20 +56,29 @@ try{
 
             $putResponse = Invoke-RestMethod -Method Put -Uri $putUri -Body $body -ContentType "application/json;charset=utf-8" -Headers $Headers -UseBasicParsing
         }
-        $success = $True;
-        $auditMessage = " $($account.knUser.Values.'@UsId') successfully"; 
+
+        $auditLogs.Add([PSCustomObject]@{
+            Action = "EnableAccount"
+            Message = "Enabled account with Id $($aRef)"
+            IsError = $false;
+        });
+
+        $success = $true;    
     }
 }catch{
-    $errResponse = $_;
-    $auditMessage = " $($account.knUser.Values.'@UsId') : ${errResponse}";
+    $auditLogs.Add([PSCustomObject]@{
+        Action = "EnableAccount"
+        Message = "Error enabling account with Id $($aRef): $($_)"
+        IsError = $True
+    });
+	Write-Error $_;
 }
 
-#build up result
+# Send results
 $result = [PSCustomObject]@{
-    Success= $success;
-    AccountReference= $aRef;
-    AuditDetails=$auditMessage;
-    Account= $account;  
+	Success= $success;
+	AccountReference= $aRef;
+	AuditLogs = $auditLogs;
+    Account = $account;
 };
-    
 Write-Output $result | ConvertTo-Json -Depth 10;
