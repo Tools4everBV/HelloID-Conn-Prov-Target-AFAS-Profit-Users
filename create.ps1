@@ -3,6 +3,7 @@ $config = ConvertFrom-Json $configuration
 $BaseUri = $config.BaseUri
 $Token = $config.Token
 $RelationNumber = $config.RelationNumber
+$updateUserId = $config.updateUserId
 $getConnector = "T4E_HelloID_Users"
 $updateConnector = "knUser"
 
