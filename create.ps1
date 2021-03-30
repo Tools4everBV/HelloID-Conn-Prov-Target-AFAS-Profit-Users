@@ -19,8 +19,8 @@ $auditLogs = New-Object Collections.Generic.List[PSCustomObject];
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls -bor [Net.SecurityProtocolType]::Tls11 -bor [Net.SecurityProtocolType]::Tls12
 
 $personId = $p.ExternalId; # Profit Employee Nummer
-$emailaddress = $p.Accounts.AzureADSchoulens.userPrincipalName  + "1";
-$userPrincipalName = $p.Accounts.AzureADSchoulens.userPrincipalName + "1";
+$emailaddress = $p.Accounts.AzureADSchoulens.userPrincipalName;
+$userPrincipalName = $p.Accounts.AzureADSchoulens.userPrincipalName;
 $userId = $RelationNumber + "." + $p.Custom.employeeNumber;
 
 $currentDate = (Get-Date).ToString("dd/MM/yyyy hh:mm:ss")
