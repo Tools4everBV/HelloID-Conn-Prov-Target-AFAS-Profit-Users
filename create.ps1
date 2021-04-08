@@ -31,10 +31,23 @@ try{
     $Headers = @{ Authorization = $authValue }
 
     $getUri = $BaseUri + "/connectors/" + $getConnector + "?filterfieldids=Persoonsnummer&filtervalues=$personId&operatortypes=1"
-    $getResponse = Invoke-RestMethod -Method Get -Uri $getUri -ContentType "application/json;charset=utf-8" -Headers $Headers -UseBasicParsing -ErrorAction Stop
+    $getResponse = Invoke-RestMethod -Method Get -Uri $getUri -ContentType "application/json;charset=utf-8" -Headers $Headers -UseBasicParsing -ErrorAction Stop 
 
     if($getResponse.rows.Count -eq 1 -and (![string]::IsNullOrEmpty($getResponse.rows.Gebruiker))){
-        # Account already linked to this person. Updating account
+        # Retrieve current account data for properties to be updated
+        $previousAccount = [PSCustomObject]@{
+            'KnUser' = @{
+                'Element' = @{
+                    '@UsId' = $getResponse.rows.Gebruiker;
+                    'Fields' = @{
+                        # E-mail
+                        'EmAd'  = $getResponse.rows.Email_werk_gebruiker;
+                        # UPN
+                        'Upn' = $getResponse.rows.UPN;
+                    }
+                }
+            }
+        }
         
         if($updateUserId -eq $true){
             # If User ID doesn't match naming convention, update this
@@ -66,24 +79,13 @@ try{
                     $putResponse = Invoke-RestMethod -Method Put -Uri $putUri -Body $body -ContentType "application/json;charset=utf-8" -Headers $Headers -UseBasicParsing -ErrorAction Stop
                     Write-Verbose -Verbose "UserId [$($getResponse.rows.Gebruiker)] updated to [$userId]"
                 }
+		
+		# Get Person data to make sure we have the latest fields (after update of UserId)
+	    	$getUri = $BaseUri + "/connectors/" + $getConnector + "?filterfieldids=Persoonsnummer&filtervalues=$personId&operatortypes=1"
+    		$getResponse = Invoke-RestMethod -Method Get -Uri $getUri -ContentType "application/json;charset=utf-8" -Headers $Headers -UseBasicParsing -ErrorAction Stop
             }
         }
-
-        # Retrieve current account data for properties to be updated
-        $previousAccount = [PSCustomObject]@{
-            'KnUser' = @{
-                'Element' = @{
-                    '@UsId' = $getResponse.rows.Gebruiker;
-                    'Fields' = @{
-                        # E-mail
-                        'EmAd'  = $getResponse.rows.Email_werk_gebruiker;
-                        # UPN
-                        'Upn' = $getResponse.rows.UPN;
-                    }
-                }
-            }
-        }
-        
+       
         # Map the properties to update
         $account = [PSCustomObject]@{
             'KnUser' = @{
