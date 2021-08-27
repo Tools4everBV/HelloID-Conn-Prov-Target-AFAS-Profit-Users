@@ -3,6 +3,12 @@
   <img src="https://user-images.githubusercontent.com/68013812/94159371-c1928f80-fe83-11ea-9582-1e4504da8282.png">
 </p>
 
+<!-- Version -->
+## Version
+Version 1.0.0.
+> __Be very cautious when updating the User ID. This is not without drawbacks.
+Please see the [AFAS documentation](https://help.afas.nl/help/NL/SE/App_Auth_Usr_ChCode.htm) for more information on this:__
+
 <!-- TABLE OF CONTENTS -->
 ## Table of Contents
 * [Introduction](#introduction)
