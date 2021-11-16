@@ -51,7 +51,7 @@ try{
                     '@UsId' = $getResponse.rows.Gebruiker;
                     'Fields' = @{
                         # Mutatie code
-                        'MtCd' = 6;
+                        'MtCd' = 2;
                         # Omschrijving
                         "Nm" = "Disabled by HelloID Provisioning on $currentDate";
 
