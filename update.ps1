@@ -1,91 +1,48 @@
-$config = ConvertFrom-Json $configuration
-
-$BaseUri = $config.BaseUri
-$Token = $config.Token
-$RelationNumber = $config.RelationNumber
-$updateUserId = $config.updateUserId
-$getConnector = "T4E_HelloID_Users"
-$updateConnector = "knUser"
-
-#Initialize default properties
-$p = $person | ConvertFrom-Json;
-$m = $manager | ConvertFrom-Json;
-$aRef = $accountReference | ConvertFrom-Json;
-$mRef = $managerAccountReference | ConvertFrom-Json;
-$success = $False;
-$auditLogs = New-Object Collections.Generic.List[PSCustomObject];
-
 # Set TLS to accept TLS, TLS 1.1 and TLS 1.2
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls -bor [Net.SecurityProtocolType]::Tls11 -bor [Net.SecurityProtocolType]::Tls12
 
-$filterfieldid = "Gebruiker"
-$filtervalue = $aRef.Gebruiker; # Has to match the AFAS value of the specified filter field ($filterfieldid)
-$emailaddress = $p.Accounts.MicrosoftActiveDirectory.mail;
-$userPrincipalName = $p.Accounts.MicrosoftActiveDirectory.userPrincipalName;
-$userId = $RelationNumber + "." + $p.Custom.employeeNumber;
+$VerbosePreference = "SilentlyContinue"
+$InformationPreference = "Continue"
+$WarningPreference = "Continue"
 
-$currentDate = (Get-Date).ToString("dd/MM/yyyy hh:mm:ss")
+$c = $configuration | ConvertFrom-Json
+$p = $person | ConvertFrom-Json
+$success = $false
+$auditLogs = [Collections.Generic.List[PSCustomObject]]::new()
+
+$BaseUri = $c.BaseUri
+$Token = $c.Token
+$getConnector = "T4E_HelloID_Users_v2"
+$updateConnector = "knUser"
+
+$filterfieldid = "Gebruiker"
+$filtervalue = $aRef.Gebruiker # Has to match the AFAS value of the specified filter field ($filterfieldid)
+$emailaddress = $p.Accounts.MicrosoftActiveDirectory.mail
+$userPrincipalName = $p.Accounts.MicrosoftActiveDirectory.userPrincipalName
 
 $EmAdUpdated = $false
 $UpnUpdated = $false
 
-try{
+try {
     $encodedToken = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($Token))
     $authValue = "AfasToken $encodedToken"
     $Headers = @{ Authorization = $authValue }
     $getUri = $BaseUri + "/connectors/" + $getConnector + "?filterfieldids=$filterfieldid&filtervalues=$filtervalue&operatortypes=1"
     $getResponse = Invoke-RestMethod -Method Get -Uri $getUri -ContentType "application/json;charset=utf-8" -Headers $Headers -UseBasicParsing
 
-    if($getResponse.rows.Count -eq 1 -and (![string]::IsNullOrEmpty($getResponse.rows.Gebruiker))){
+    if ($getResponse.rows.Count -eq 1 -and (![string]::IsNullOrEmpty($getResponse.rows.Gebruiker))) {
         # Retrieve current account data for properties to be updated
         $previousAccount = [PSCustomObject]@{
             'KnUser' = @{
                 'Element' = @{
-                    '@UsId' = $getResponse.rows.Gebruiker;
+                    '@UsId'  = $getResponse.rows.Gebruiker
                     'Fields' = @{
                         # E-mail
-                        'EmAd'  = $getResponse.rows.Email_werk_gebruiker;
+                        'EmAd' = $getResponse.rows.Email_werk_gebruiker
                         # UPN
-                        'Upn' = $getResponse.rows.UPN;
+                        'Upn'  = $getResponse.rows.UPN
                     }
                 }
-            }
-        }
-        
-        if($updateUserId -eq $true){
-            # If User ID doesn't match naming convention, update this
-            if($getResponse.rows.Gebruiker -ne $userId){
-                $account = [PSCustomObject]@{
-                    'KnUser' = @{
-                        'Element' = @{
-                            '@UsId' = $getResponse.rows.Gebruiker;
-                            'Fields' = @{
-                                # Mutatie code
-                                'MtCd' = 4;
-                                # Omschrijving
-                                "Nm" = "Updated User ID by HelloID Provisioning on $currentDate";
-
-                                # Persoon code - Only specify this if you want to update the linked person - Make sure this has a value, otherwise the link will disappear
-                                # "BcCo" = $getResponse.rows.Persoonsnummer;  
-
-                                # Nieuwe gebruikerscode
-                                "UsIdNew" = $userId;    
-                            }
-                        }
-                    }
-                }
-
-                if(-Not($dryRun -eq $True)){
-                    $body = $account | ConvertTo-Json -Depth 10
-                    $putUri = $BaseUri + "/connectors/" + $updateConnector
-
-                    $putResponse = Invoke-RestMethod -Method Put -Uri $putUri -Body $body -ContentType "application/json;charset=utf-8" -Headers $Headers -UseBasicParsing -ErrorAction Stop
-                    Write-Verbose -Verbose "UserId [$($getResponse.rows.Gebruiker)] updated to [$userId]"
-                }
-		
-                # Get Person data to make sure we have the latest fields (after update of UserId)
-                $getUri = $BaseUri + "/connectors/" + $getConnector + "?filterfieldids=$filterfieldid&filtervalues=$filtervalue&operatortypes=1"
-                $getResponse = Invoke-RestMethod -Method Get -Uri $getUri -ContentType "application/json;charset=utf-8" -Headers $Headers -UseBasicParsing
             }
         }
        
@@ -93,31 +50,31 @@ try{
         $account = [PSCustomObject]@{
             'KnUser' = @{
                 'Element' = @{
-                    '@UsId' = $getResponse.rows.Gebruiker;
+                    '@UsId'  = $getResponse.rows.Gebruiker
                     'Fields' = @{
                         # Mutatie code
-                        'MtCd' = 1;
+                        'MtCd' = 1
                         # Omschrijving
-                        "Nm" = "Updated by HelloID Provisioning on $currentDate";
+                        "Nm"   = $getResponse.rows.DisplayName
                     }
                 }
             }
         }
 
         # If '$userPrincipalName' does not match current 'UPN', add 'UPN' to update body. AFAS will throw an error when trying to update this with the same value
-        if($getResponse.rows.UPN -ne $userPrincipalName){
+        if ($getResponse.rows.UPN -ne $userPrincipalName) {
             # vulling UPN afstemmen met AFAS beheer
             # UPN
-            $account.'KnUser'.'Element'.'Fields' += @{'Upn' = $userPrincipalName}
+            $account.'KnUser'.'Element'.'Fields' += @{'Upn' = $userPrincipalName }
             Write-Verbose -Verbose "Updating UPN '$($getResponse.rows.UPN)' with new value '$userPrincipalName'"
             # Set variable to indicate update of Upn has occurred (for export data object)
             $UpnUpdated = $true
         }
 
         # If '$emailAdddres' does not match current 'EmAd', add 'EmAd' to update body. AFAS will throw an error when trying to update this with the same value
-        if($getResponse.rows.Email_werk_gebruiker -ne $emailaddress){
+        if ($getResponse.rows.Email_werk_gebruiker -ne $emailaddress) {
             # E-mail
-            $account.'KnUser'.'Element'.'Fields' += @{'EmAd' = $emailaddress}
+            $account.'KnUser'.'Element'.'Fields' += @{'EmAd' = $emailaddress }
             Write-Verbose -Verbose "Updating BusinessEmailAddress '$($getResponse.rows.Email_werk_gebruiker)' with new value '$emailaddress'"
             # Set variable to indicate update of EmAd has occurred (for export data object)
             $EmAdUpdated = $true
@@ -126,61 +83,65 @@ try{
         # Set aRef object for use in futher actions
         $aRef = [PSCustomObject]@{
             Gebruiker = $($account.knUser.Values.'@UsId')
-        }  
+        }
 
-        if(-Not($dryRun -eq $True)){
-            $body = $account | ConvertTo-Json -Depth 10
-            $putUri = $BaseUri + "/connectors/" + $updateConnector
-
+        $body = $account | ConvertTo-Json -Depth 10
+        $putUri = $BaseUri + "/connectors/" + $updateConnector
+        if (-Not($dryRun -eq $true)) {
             $putResponse = Invoke-RestMethod -Method Put -Uri $putUri -Body $body -ContentType "application/json;charset=utf-8" -Headers $Headers -UseBasicParsing -ErrorAction Stop
+        }
+        else {
+            Write-Information $putUri
+            Write-Information $body
         }
         
         $auditLogs.Add([PSCustomObject]@{
-            Action = "UpdateAccount"
-            Message = "Updated fields of account with id $($aRef.Gebruiker)"
-            IsError = $false;
-        });
+                Action  = "UpdateAccount"
+                Message = "Updated fields of account with id $($aRef.Gebruiker)"
+                IsError = $false
+            })
 
-        $success = $true;          
+        $success = $true          
     }
     else {
         $auditLogs.Add([PSCustomObject]@{
-            Action = "DeleteAccount"
-            Message = "No profit user found for person $filtervalue";
-            IsError = $false;
-        });        
+                Action  = "UpdateAccount"
+                Message = "No profit user found with for $($filterfieldid) = $($filtervalue)"
+                IsError = $false
+            })        
 
-        $success = $false;         
-        Write-Warning "No profit user found for person $filtervalue";
-    }    
-}catch{
+        $success = $false
+        Write-Warning "No profit user found with for $($filterfieldid) = $($filtervalue)"
+    }       
+}
+catch {
     $auditLogs.Add([PSCustomObject]@{
-        Action = "UpdateAccount"
-        Message = "Error updating fields of account with Id $($aRef.Gebruiker): $($_)"
-        IsError = $True
-    });
-    Write-Warning $_;
+            Action  = "UpdateAccount"
+            Message = "Error updating fields of account with Id $($aRef.Gebruiker): $($_)"
+            IsError = $true
+        })
+    Write-Warning $_
 }
 
 # Send results
 $result = [PSCustomObject]@{
-	Success= $success;
-	AccountReference= $aRef;
-	AuditLogs = $auditLogs;
-    Account = $account;
-    PreviousAccount = $previousAccount;    
+    Success          = $success
+    AccountReference = $aRef
+    AuditLogs        = $auditLogs
+    Account          = $account
+    PreviousAccount  = $previousAccount    
 
     # Optionally return data for use in other systems
-    ExportData = [PSCustomObject]@{
-        Gebruiker               = $aRef.Gebruiker
-    };    
-};
+    ExportData       = [PSCustomObject]@{
+        Gebruiker = $aRef.Gebruiker
+    }    
+}
 
 # Only add the data to ExportData if it has actually been updated, since we want to store the data HelloID has sent
-if($UpnUpdated -eq $true){
+if ($UpnUpdated -eq $true) {
     $result.ExportData | Add-Member -MemberType NoteProperty -Name UPN -Value $($account.KnUser.Element.Fields.UPN) -Force
 }
-if($EmAdUpdated -eq $true){
+if ($EmAdUpdated -eq $true) {
     $result.ExportData | Add-Member -MemberType NoteProperty -Name BusinessEmailAddress -Value $($account.KnUser.Element.Fields.EmAd) -Force
 }
-Write-Output $result | ConvertTo-Json -Depth 10;
+Write-Output $result | ConvertTo-Json -Depth 10
