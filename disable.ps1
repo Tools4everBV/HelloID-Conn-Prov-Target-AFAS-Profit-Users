@@ -37,10 +37,10 @@ try{
                         # Mutatie code
                         'MtCd' = 2
                         # Omschrijving
-                        "Nm" = "Disabled by HelloID Provisioning on $currentDate";
+                        "Nm" = "Disabled by HelloID Provisioning on $currentDate"
 
                         # Persoon code - Only specify this if you want to update the linked person - Make sure this has a value, otherwise the link will disappear
-                        # "BcCo" = $getResponse.rows.Persoonsnummer;  
+                        # "BcCo" = $getResponse.rows.Persoonsnummer
 
                         # InSite
                         "InSi" = $false
@@ -63,7 +63,7 @@ try{
             Action = "DisableAccount"
             Message = "Disabled account with Id $($aRef)"
             IsError = $false
-        });
+        })
 
         $success = $true
     }

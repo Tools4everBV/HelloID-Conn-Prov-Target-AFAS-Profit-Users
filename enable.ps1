@@ -8,18 +8,18 @@ $getConnector = "T4E_HelloID_Users"
 $updateConnector = "knUser"
 
 #Initialize default properties
-$p = $person | ConvertFrom-Json;
-$m = $manager | ConvertFrom-Json;
-$aRef = $accountReference | ConvertFrom-Json;
-$mRef = $managerAccountReference | ConvertFrom-Json;
-$success = $False;
-$auditLogs = New-Object Collections.Generic.List[PSCustomObject];
+$p = $person | ConvertFrom-Json
+$m = $manager | ConvertFrom-Json
+$aRef = $accountReference | ConvertFrom-Json
+$mRef = $managerAccountReference | ConvertFrom-Json
+$success = $False
+$auditLogs = New-Object Collections.Generic.List[PSCustomObject]
 
 # Set TLS to accept TLS, TLS 1.1 and TLS 1.2
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls -bor [Net.SecurityProtocolType]::Tls11 -bor [Net.SecurityProtocolType]::Tls12
 
 $filterfieldid = "Gebruiker"
-$filtervalue = $aRef.Gebruiker; # Has to match the AFAS value of the specified filter field ($filterfieldid)
+$filtervalue = $aRef.Gebruiker # Has to match the AFAS value of the specified filter field ($filterfieldid)
 
 $currentDate = (Get-Date).ToString("dd/MM/yyyy hh:mm:ss")
 

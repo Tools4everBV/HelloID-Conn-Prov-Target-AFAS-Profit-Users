@@ -37,7 +37,8 @@
     "defaultValue": false,
     "templateOptions": {
       "label": "Update User ID if it doesn't match naming convention",
-      "required": false
+      "required": false,
+      "description": "Please consult AFAS first. Use with care!"
     }
   }
 ]
