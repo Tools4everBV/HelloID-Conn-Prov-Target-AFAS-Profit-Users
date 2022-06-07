@@ -7,6 +7,7 @@ $WarningPreference = "Continue"
 
 $c = $configuration | ConvertFrom-Json
 $p = $person | ConvertFrom-Json
+$aRef = $accountReference | ConvertFrom-Json
 $success = $false
 $auditLogs = [Collections.Generic.List[PSCustomObject]]::new()
 
