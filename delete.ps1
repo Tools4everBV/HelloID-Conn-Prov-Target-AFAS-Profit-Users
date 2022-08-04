@@ -53,7 +53,7 @@ try {
                     '@UsId'  = $getResponse.rows.Gebruiker
                     'Fields' = @{
                         # Mutatie code
-                        'MtCd' = 1
+                        'MtCd' = 6
                         # Omschrijving
                         "Nm"   = $getResponse.rows.DisplayName
                     }
