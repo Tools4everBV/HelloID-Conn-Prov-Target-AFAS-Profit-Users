@@ -38,9 +38,9 @@ $account = [PSCustomObject]@{
                 'MtCd' = 2
 
                 # E-mail
-                'EmAd' = $null # or "$personId@customer.nl" # Unique value based of PersonId because at the revoke action we want to clear the unique fields.
+                'EmAd' = "" # or "$personId@customer.nl" # Unique value based of PersonId because at the revoke action we want to clear the unique fields.
                 # UPN
-                'Upn'  = $null # or "$personId@customer.nl" # Unique value based of PersonId because at the revoke action we want to clear the unique fields
+                'Upn'  = "" # or "$personId@customer.nl" # Unique value based of PersonId because at the revoke action we want to clear the unique fields
 
                 # OutSite (when clearing email address, OutSite cannot be enabled)
                 "Site"    = $false
@@ -112,10 +112,10 @@ try {
     }
 
     # Check if current EmAd or Upn has a different value from mapped value. AFAS will throw an error when trying to update this with the same value
-    if ($currentAccount.UPN -ne $account.'KnUser'.'Element'.'Fields'.'Upn') {
+    if ([string]$currentAccount.UPN -ne $account.'KnUser'.'Element'.'Fields'.'Upn' -and $null -ne $account.'KnUser'.'Element'.'Fields'.'Upn') {
         $propertiesChanged += @('Upn')
     }
-    if ($currentAccount.Email_werk_gebruiker -ne $account.'KnUser'.'Element'.'Fields'.'EmAd') {
+    if ($currentAccount.Email_werk_gebruiker -ne $account.'KnUser'.'Element'.'Fields'.'EmAd' -and $null -ne $account.'KnUser'.'Element'.'Fields'.'EmAd') {
         $propertiesChanged += @('EmAd')
     }
     if ($propertiesChanged) {
@@ -185,20 +185,27 @@ if ($null -ne $currentAccount.Gebruiker) {
 
                 # Check if current EmAd or Upn has a different value from mapped value. AFAS will throw an error when trying to update this with the same value
                 if ('UPN' -in $propertiesChanged) {
-                    # vulling UPN afstemmen met AFAS beheer
                     # UPN
                     $updateAccount.'KnUser'.'Element'.'Fields'.'Upn' = $account.'KnUser'.'Element'.'Fields'.'Upn'
-                    Write-Information "Updating UPN '$($currentAccount.UPN)' with new value '$($account.'KnUser'.'Element'.'Fields'.'Upn')'"
-                    # Set variable to indicate update of Upn has occurred (for export data object)
                     $UpnUpdated = $true
+                    if (-not($dryRun -eq $true)) {
+                        Write-Information "Updating UPN '$($currentAccount.UPN)' with new value '$($updateAccount.'KnUser'.'Element'.'Fields'.'Upn')'"
+                    }
+                    else {
+                        Write-Warning "DryRun: Would update UPN '$($currentAccount.UPN)' with new value '$($updateAccount.'KnUser'.'Element'.'Fields'.'Upn')'"
+                    }
                 }
 
                 if ('EmAd' -in $propertiesChanged) {
                     # E-mail                       
                     $updateAccount.'KnUser'.'Element'.'Fields'.'EmAd' = $account.'KnUser'.'Element'.'Fields'.'EmAd'
-                    Write-Information "Updating BusinessEmailAddress '$($currentAccount.Email_werk_gebruiker)' with new value '$($account.'KnUser'.'Element'.'Fields'.'EmAd')'"
-                    # Set variable to indicate update of EmAd has occurred (for export data object)
                     $EmAdUpdated = $true
+                    if (-not($dryRun -eq $true)) {
+                        Write-Information "Updating UPN '$($currentAccount.Email_werk_gebruiker)' with new value '$($updateAccount.'KnUser'.'Element'.'Fields'.'EmAd')'"
+                    }
+                    else {
+                        Write-Warning "DryRun: Would update UPN '$($currentAccount.Email_werk_gebruiker)' with new value '$($updateAccount.'KnUser'.'Element'.'Fields'.'EmAd')'"
+                    }
                 }
 
                 $body = ($updateAccount | ConvertTo-Json -Depth 10)

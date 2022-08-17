@@ -108,7 +108,9 @@ try {
     if ($null -eq $currentAccount.Gebruiker) {
         throw "No AFAS account found with $($filterfieldid) $($filtervalue)"
     }
-    if ($currentAccount.Email_werk_gebruiker -ne $account.'KnUser'.'Element'.'Fields'.'EmAd') {
+
+    # Check if current EmAd has a different value from mapped value. AFAS will throw an error when trying to update this with the same value
+    if ($currentAccount.Email_werk_gebruiker -ne $account.'KnUser'.'Element'.'Fields'.'EmAd' -and $null -ne $account.'KnUser'.'Element'.'Fields'.'EmAd') {
         $propertiesChanged += @('EmAd')
     }
     if ($propertiesChanged) {
@@ -169,12 +171,17 @@ if ($null -eq $urrentAccount.Gebruiker) {
                     }
                 }
 
+                # Check if current EmAd has a different value from mapped value. AFAS will throw an error when trying to update this with the same value
                 if ('EmAd' -in $propertiesChanged) {
                     # E-mail                       
                     $updateAccount.'KnUser'.'Element'.'Fields'.'EmAd' = $account.'KnUser'.'Element'.'Fields'.'EmAd'
-                    Write-Information "Updating BusinessEmailAddress '$($currentAccount.Email_werk_gebruiker)' with new value '$($account.'KnUser'.'Element'.'Fields'.'EmAd')'"
-                    # Set variable to indicate update of EmAd has occurred (for export data object)
                     $EmAdUpdated = $true
+                    if (-not($dryRun -eq $true)) {
+                        Write-Information "Updating UPN '$($currentAccount.Email_werk_gebruiker)' with new value '$($updateAccount.'KnUser'.'Element'.'Fields'.'EmAd')'"
+                    }
+                    else {
+                        Write-Warning "DryRun: Would update UPN '$($currentAccount.Email_werk_gebruiker)' with new value '$($updateAccount.'KnUser'.'Element'.'Fields'.'EmAd')'"
+                    }
                 }
 
                 $body = ($updateAccount | ConvertTo-Json -Depth 10)
