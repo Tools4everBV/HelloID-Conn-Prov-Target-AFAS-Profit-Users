@@ -86,6 +86,7 @@ When the connector is defined as target system, only the following GetConnector 
 
 #### Remarks
  - In view of GDPR, the persons private data, such as private email address and birthdate are not in the data collection by default. When needed for the implementation (e.g. set emailaddress with private email address on delete), these properties will have to be added.
+ - We never delete users in AFAS, we only clear the unique fields and block the users.
 
 #### Scope
 The data collection retrieved by the set of GetConnector's is sufficient for HelloID to provision persons.

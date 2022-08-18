@@ -191,10 +191,10 @@ if ($null -ne $currentAccount.Gebruiker) {
                     $updateAccount.'KnUser'.'Element'.'Fields'.'EmAd' = $account.'KnUser'.'Element'.'Fields'.'EmAd'
                     $EmAdUpdated = $true
                     if (-not($dryRun -eq $true)) {
-                        Write-Information "Updating UPN '$($currentAccount.Email_werk_gebruiker)' with new value '$($updateAccount.'KnUser'.'Element'.'Fields'.'EmAd')'"
+                        Write-Information "Updating EmAd '$($currentAccount.Email_werk_gebruiker)' with new value '$($updateAccount.'KnUser'.'Element'.'Fields'.'EmAd')'"
                     }
                     else {
-                        Write-Warning "DryRun: Would update UPN '$($currentAccount.Email_werk_gebruiker)' with new value '$($updateAccount.'KnUser'.'Element'.'Fields'.'EmAd')'"
+                        Write-Warning "DryRun: Would update EmAd '$($currentAccount.Email_werk_gebruiker)' with new value '$($updateAccount.'KnUser'.'Element'.'Fields'.'EmAd')'"
                     }
                 }
 

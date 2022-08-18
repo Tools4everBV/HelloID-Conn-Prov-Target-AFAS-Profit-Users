@@ -370,10 +370,10 @@ switch ($action) {
                         $updateAccount.'KnUser'.'Element'.'Fields'.'EmAd' = $account.'KnUser'.'Element'.'Fields'.'EmAd'
                         $EmAdUpdated = $true
                         if (-not($dryRun -eq $true)) {
-                            Write-Information "Updating UPN '$($currentAccount.Email_werk_gebruiker)' with new value '$($updateAccount.'KnUser'.'Element'.'Fields'.'EmAd')'"
+                            Write-Information "Updating EmAd '$($currentAccount.Email_werk_gebruiker)' with new value '$($updateAccount.'KnUser'.'Element'.'Fields'.'EmAd')'"
                         }
                         else {
-                            Write-Warning "DryRun: Would update UPN '$($currentAccount.Email_werk_gebruiker)' with new value '$($updateAccount.'KnUser'.'Element'.'Fields'.'EmAd')'"
+                            Write-Warning "DryRun: Would update EmAd '$($currentAccount.Email_werk_gebruiker)' with new value '$($updateAccount.'KnUser'.'Element'.'Fields'.'EmAd')'"
                         }
                     }
 
@@ -479,10 +479,10 @@ $result = [PSCustomObject]@{
 }
 
 # Only add the data to ExportData if it has actually been updated, since we want to store the data HelloID has sent
-if ($UpnUpdated -eq $true) {
+if ($UpnUpdated -eq $true -or $action -eq 'Create') {
     $result.ExportData | Add-Member -MemberType NoteProperty -Name UPN -Value $($account.KnUser.Element.Fields.UPN) -Force
 }
-if ($EmAdUpdated -eq $true) {
+if ($EmAdUpdated -eq $true -or $action -eq 'Create') {
     $result.ExportData | Add-Member -MemberType NoteProperty -Name BusinessEmailAddress -Value $($account.KnUser.Element.Fields.EmAd) -Force
 }
 Write-Output $result | ConvertTo-Json -Depth 10
