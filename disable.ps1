@@ -150,7 +150,7 @@ catch {
 }
 
 # Update AFAS Account
-if ($null -eq $urrentAccount.Gebruiker) {
+if ($null -eq $currentAccount.Gebruiker) {
     switch ($updateAction) {
         'Update' {
             try {
