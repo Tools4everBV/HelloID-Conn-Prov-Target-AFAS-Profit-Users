@@ -206,7 +206,7 @@ $UpnUpdated = $false
 switch ($action) {
     'Create' {
         try {
-            Write-Verbose "Creating AFAS account with userId $($account.'KnUser'.'Element'.'@UsId')"
+            Write-Verbose "Creating AFAS account with userId '$($account.'KnUser'.'Element'.'@UsId')', Business Email: '$($account.'KnUser'.'Element'.'Fields'.'EmAd')' and UPN: '$($account.'KnUser'.'Element'.'Fields'.'Upn')'"
 
             # Set Persoon code to link to correct person
             $account.'KnUser'.'Element'.'Fields'.'BcCo' = $currentAccount.Persoonsnummer
@@ -230,12 +230,12 @@ switch ($action) {
 
                 $auditLogs.Add([PSCustomObject]@{
                         Action  = "CreateAccount"
-                        Message = "Successfully created AFAS account with userId $($aRef.Gebruiker)"
+                        Message = "Successfully created AFAS account with userId '$($account.'KnUser'.'Element'.'@UsId')', Business Email: '$($account.'KnUser'.'Element'.'Fields'.'EmAd')' and UPN: '$($account.'KnUser'.'Element'.'Fields'.'Upn')'"
                         IsError = $false
                     })
             }
             else {
-                Write-Warning "DryRun: Would create AFAS account with userId $($account.'KnUser'.'Element'.'@UsId')"
+                Write-Warning "DryRun: Would create AFAS account with userId '$($account.'KnUser'.'Element'.'@UsId')', Business Email: '$($account.'KnUser'.'Element'.'Fields'.'EmAd')' and UPN: '$($account.'KnUser'.'Element'.'Fields'.'Upn')'"
             }
             break
         }
@@ -248,20 +248,20 @@ switch ($action) {
             $success = $false  
             $auditLogs.Add([PSCustomObject]@{
                     Action  = "CreateAccount"
-                    Message = "Error creating AFAS account with userId $($aRef.Gebruiker). Error Message: $auditErrorMessage"
+                    Message = "Error creating AFAS account with userId '$($account.'KnUser'.'Element'.'@UsId')', Business Email: '$($account.'KnUser'.'Element'.'Fields'.'EmAd')' and UPN: '$($account.'KnUser'.'Element'.'Fields'.'Upn')'. Error Message: $auditErrorMessage"
                     IsError = $True
                 })
         }
     }
     'Update-Correlate' {
-        Write-Verbose "Updating and correlating AFAS account with userId $($currentAccount.Gebruiker)"
+        Write-Verbose "Updating and correlating AFAS account with userId '$($currentAccount.Gebruiker)'"
 
         switch ($updateAction) {
             'Update' {
                 try {
                     # If User ID doesn't match naming convention, update this
                     if ($updateUserId -eq $true -and 'UsId' -in $propertiesChanged) {
-                        Write-Verbose "Updating AFAS account with userId $($currentAccount.Gebruiker) to new userId '$($account.'KnUser'.'Element'.'Fields'.'UsIdNew')'"
+                        Write-Verbose "Updating AFAS account with userId '$($currentAccount.Gebruiker)' to new userId '$($account.'KnUser'.'Element'.'Fields'.'UsIdNew')'"
 
                         # Create custom account object for update
                         $updateAccountUserId = [PSCustomObject]@{
@@ -300,12 +300,12 @@ switch ($action) {
             
                             $auditLogs.Add([PSCustomObject]@{
                                     Action  = "CreateAccount"
-                                    Message = "Successfully updated AFAS account with userId $($currentAccount.Gebruiker) to new userId '$($updateAccountUserId.'KnUser'.'Element'.'Fields'.'UsIdNew')'"
+                                    Message = "Successfully updated AFAS account with userId '$($currentAccount.Gebruiker)' to new userId '$($updateAccountUserId.'KnUser'.'Element'.'Fields'.'UsIdNew')'"
                                     IsError = $false
                                 })
                         }
                         else {
-                            Write-Warning "DryRun: Would update AFAS account with userId $($currentAccount.Gebruiker) to new userId '$($updateAccountUserId.'KnUser'.'Element'.'Fields'.'UsIdNew')'"
+                            Write-Warning "DryRun: Would update AFAS account with userId '$($currentAccount.Gebruiker)' to new userId '$($updateAccountUserId.'KnUser'.'Element'.'Fields'.'UsIdNew')'"
                         }
         
                         # Get Person data to make sure we have the latest fields (after update of UserId)
@@ -329,13 +329,13 @@ switch ($action) {
                     $success = $false  
                     $auditLogs.Add([PSCustomObject]@{
                             Action  = "CreateAccount"
-                            Message = "Error updating AFAS account with userId $($currentAccount.Gebruiker) to new userId '$($account.'KnUser'.'Element'.'Fields'.'UsIdNew')'. Error Message: $auditErrorMessage"
+                            Message = "Error updating AFAS account with userId '$($currentAccount.Gebruiker)' to new userId '$($account.'KnUser'.'Element'.'Fields'.'UsIdNew')'. Error Message: $auditErrorMessage"
                             IsError = $True
                         })
                 }
 
                 try {
-                    Write-Verbose "Updating AFAS account with userId $($currentAccount.Gebruiker)"
+                    Write-Verbose "Updating AFAS account with userId '$($currentAccount.Gebruiker)'"
 
                     # Create custom account object for update
                     $updateAccount = [PSCustomObject]@{
@@ -396,12 +396,12 @@ switch ($action) {
         
                         $auditLogs.Add([PSCustomObject]@{
                                 Action  = "CreateAccount"
-                                Message = "Successfully updated AFAS account with userId $($aRef.Gebruiker)"
+                                Message = "Successfully updated AFAS account with userId '$($aRef.Gebruiker)'"
                                 IsError = $false
                             })
                     }
                     else {
-                        Write-Warning "DryRun: Would update AFAS account with userId $($currentAccount.Gebruiker)"
+                        Write-Warning "DryRun: Would update AFAS account with userId '$($currentAccount.Gebruiker)'"
                     }
                     break
                 }
@@ -415,13 +415,13 @@ switch ($action) {
                     $success = $false  
                     $auditLogs.Add([PSCustomObject]@{
                             Action  = "CreateAccount"
-                            Message = "Error updating AFAS account with userId $($currentAccount.Gebruiker). Error Message: $auditErrorMessage"
+                            Message = "Error updating AFAS account with userId '$($currentAccount.Gebruiker)'. Error Message: $auditErrorMessage"
                             IsError = $True
                         })
                 }
             }
             'NoChanges' {
-                Write-Verbose "No changes to AFAS account with userId $($currentAccount.Gebruiker)"
+                Write-Verbose "No changes to AFAS account with userId '$($currentAccount.Gebruiker)'"
 
                 if (-not($dryRun -eq $true)) {
                     # Set aRef object for use in futher actions
@@ -431,12 +431,12 @@ switch ($action) {
 
                     $auditLogs.Add([PSCustomObject]@{
                             Action  = "CreateAccount"
-                            Message = "Successfully updated AFAS account with userId $($aRef.Gebruiker). (No Changes needed)"
+                            Message = "Successfully updated AFAS account with userId '$($aRef.Gebruiker)'. (No Changes needed)"
                             IsError = $false
                         })
                 }
                 else {
-                    Write-Warning "DryRun: No changes to AFAS account with userId $($currentAccount.Gebruiker)"
+                    Write-Warning "DryRun: No changes to AFAS account with userId '$($currentAccount.Gebruiker)'"
                 }
                 break
             }
@@ -444,7 +444,7 @@ switch ($action) {
         break
     }
     'Correlate' {
-        Write-Verbose "Correlating AFAS account with userId $($currentAccount.Gebruiker)"
+        Write-Verbose "Correlating AFAS account with userId '$($currentAccount.Gebruiker)'"
 
         if (-not($dryRun -eq $true)) {
             # Set aRef object for use in futher actions
@@ -454,12 +454,12 @@ switch ($action) {
 
             $auditLogs.Add([PSCustomObject]@{
                     Action  = "CreateAccount"
-                    Message = "Successfully correlated AFAS account with userId $($aRef.Gebruiker)"
+                    Message = "Successfully correlated AFAS account with userId '$($aRef.Gebruiker)'"
                     IsError = $false
                 })
         }
         else {
-            Write-Warning "DryRun: Would correlate AFAS account with userId $($currentAccount.Gebruiker)"
+            Write-Warning "DryRun: Would correlate AFAS account with userId '$($currentAccount.Gebruiker)'"
         }
         break
     }

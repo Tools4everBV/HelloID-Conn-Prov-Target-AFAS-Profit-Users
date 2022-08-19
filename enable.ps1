@@ -137,7 +137,7 @@ catch {
 # Update AFAS Account
 if ($null -ne $currentAccount.Gebruiker) {
     try {
-        Write-Verbose "Enabling AFAS account with userId $($currentAccount.Gebruiker)"
+        Write-Verbose "Enabling AFAS account with userId '$($currentAccount.Gebruiker)'"
 
         # Create custom account object for update
         $updateAccount = [PSCustomObject]@{
@@ -175,12 +175,12 @@ if ($null -ne $currentAccount.Gebruiker) {
 
             $auditLogs.Add([PSCustomObject]@{
                     Action  = "EnableAccount"
-                    Message = "Successfully enabled AFAS account with userId $($aRef.Gebruiker)"
+                    Message = "Successfully enabled AFAS account with userId '$($aRef.Gebruiker)'"
                     IsError = $false
                 })
         }
         else {
-            Write-Warning "DryRun: Would enable AFAS account with userId $($currentAccount.Gebruiker)"
+            Write-Warning "DryRun: Would enable AFAS account with userId '$($currentAccount.Gebruiker)'"
         }
     }
     catch {
@@ -193,7 +193,7 @@ if ($null -ne $currentAccount.Gebruiker) {
         $success = $false  
         $auditLogs.Add([PSCustomObject]@{
                 Action  = "EnableAccount"
-                Message = "Error enabling AFAS account with userId $($currentAccount.Gebruiker). Error Message: $auditErrorMessage"
+                Message = "Error enabling AFAS account with userId '$($currentAccount.Gebruiker)'. Error Message: $auditErrorMessage"
                 IsError = $True
             })
     }

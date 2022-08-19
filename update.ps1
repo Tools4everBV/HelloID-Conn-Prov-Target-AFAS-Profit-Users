@@ -156,7 +156,7 @@ if ($null -ne $currentAccount.Gebruiker) {
     switch ($updateAction) {
         'Update' {
             try {
-                Write-Verbose "Updating AFAS account with userId $($currentAccount.Gebruiker)"
+                Write-Verbose "Updating AFAS account with userId '$($currentAccount.Gebruiker)'"
 
                 # Create custom account object for update
                 $updateAccount = [PSCustomObject]@{
@@ -213,12 +213,12 @@ if ($null -ne $currentAccount.Gebruiker) {
 
                     $auditLogs.Add([PSCustomObject]@{
                             Action  = "UpdateAccount"
-                            Message = "Successfully updated AFAS account with userId $($aRef.Gebruiker)"
+                            Message = "Successfully updated AFAS account with userId '$($aRef.Gebruiker)'"
                             IsError = $false
                         })
                 }
                 else {
-                    Write-Warning "DryRun: Would update AFAS account with userId $($currentAccount.Gebruiker)"
+                    Write-Warning "DryRun: Would update AFAS account with userId '$($currentAccount.Gebruiker)'"
                 }
                 break
             }
@@ -232,23 +232,23 @@ if ($null -ne $currentAccount.Gebruiker) {
                 $success = $false  
                 $auditLogs.Add([PSCustomObject]@{
                         Action  = "UpdateAccount"
-                        Message = "Error updating AFAS account with userId $($currentAccount.Gebruiker). Error Message: $auditErrorMessage"
+                        Message = "Error updating AFAS account with userId '$($currentAccount.Gebruiker)'. Error Message: $auditErrorMessage"
                         IsError = $True
                     })
             }
         }
         'NoChanges' {
-            Write-Verbose "No changes to AFAS account with userId $($currentAccount.Gebruiker)"
+            Write-Verbose "No changes to AFAS account with userId '$($currentAccount.Gebruiker)'"
 
             if (-not($dryRun -eq $true)) {
                 $auditLogs.Add([PSCustomObject]@{
                         Action  = "UpdateAccount"
-                        Message = "Successfully updated AFAS account with userId $($aRef.Gebruiker). (No Changes needed)"
+                        Message = "Successfully updated AFAS account with userId '$($aRef.Gebruiker)'. (No Changes needed)"
                         IsError = $false
                     })
             }
             else {
-                Write-Warning "DryRun: No changes to AFAS account with userId $($currentAccount.Gebruiker)"
+                Write-Warning "DryRun: No changes to AFAS account with userId '$($currentAccount.Gebruiker)'"
             }
             break
         }
