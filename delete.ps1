@@ -38,9 +38,9 @@ $account = [PSCustomObject]@{
                 'MtCd' = 2
 
                 # E-mail
-                'EmAd' = "" # or "$personId@customer.nl" # Unique value based of PersonId because at the revoke action we want to clear the unique fields.
+                'EmAd' = "" # or "$($p.externalId)@customer.nl" # Unique value based of PersonId because at the revoke action we want to clear the unique fields.
                 # UPN
-                'Upn'  = "" # or "$personId@customer.nl" # Unique value based of PersonId because at the revoke action we want to clear the unique fields
+                'Upn'  = "" # or "$($p.externalId)@customer.nl" # Unique value based of PersonId because at the revoke action we want to clear the unique fields
 
                 # OutSite (when clearing email address, OutSite cannot be enabled)
                 "Site"    = $false
