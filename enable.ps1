@@ -1,7 +1,7 @@
 #####################################################
 # HelloID-Conn-Prov-Target-AFAS-Profit-Users-Enable
 #
-# Version: 1.2.0
+# Version: 2.0.0
 #####################################################
 # Initialize default values
 $c = $configuration | ConvertFrom-Json
@@ -38,9 +38,9 @@ $account = [PSCustomObject]@{
                 'MtCd' = 6
 
                 # OutSite
-                "Site"    = $false
+                "Site" = $false
                 # InSite
-                "InSi"    = $true
+                "InSi" = $true
             }
         }
     }
@@ -56,6 +56,32 @@ $filterfieldid = "Gebruiker"
 $filtervalue = $aRef.Gebruiker # Has to match the AFAS value of the specified filter field ($filterfieldid)
 
 #region functions
+function Resolve-HTTPError {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory,
+            ValueFromPipeline
+        )]
+        [object]$ErrorObject
+    )
+    process {
+        $httpErrorObj = [PSCustomObject]@{
+            FullyQualifiedErrorId = $ErrorObject.FullyQualifiedErrorId
+            MyCommand             = $ErrorObject.InvocationInfo.MyCommand
+            RequestUri            = $ErrorObject.TargetObject.RequestUri
+            ScriptStackTrace      = $ErrorObject.ScriptStackTrace
+            ErrorMessage          = ''
+        }
+        if ($ErrorObject.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') {
+            $httpErrorObj.ErrorMessage = $ErrorObject.ErrorDetails.Message
+        }
+        elseif ($ErrorObject.Exception.GetType().FullName -eq 'System.Net.WebException') {
+            $httpErrorObj.ErrorMessage = [System.IO.StreamReader]::new($ErrorObject.Exception.Response.GetResponseStream()).ReadToEnd()
+        }
+        Write-Output $httpErrorObj
+    }
+}
+
 function Resolve-AFASErrorMessage {
     [CmdletBinding()]
     param (
@@ -108,22 +134,31 @@ try {
 }
 catch {
     $ex = $PSItem
-    $verboseErrorMessage = $ex
+    if ( $($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
+        $errorObject = Resolve-HTTPError -Error $ex
+
+        $verboseErrorMessage = $errorObject.ErrorMessage
+
+        $auditErrorMessage = Resolve-AFASErrorMessage -ErrorObject $errorObject.ErrorMessage
+    }
+
+    # If error message empty, fall back on $ex.Exception.Message
+    if ([String]::IsNullOrEmpty($verboseErrorMessage)) {
+        $verboseErrorMessage = $ex.Exception.Message
+    }
+    if ([String]::IsNullOrEmpty($auditErrorMessage)) {
+        $auditErrorMessage = $ex.Exception.Message
+    }
+
     Write-Verbose "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($verboseErrorMessage)"
 
-    $auditErrorMessage = Resolve-AFASErrorMessage -ErrorObject $ex
     if ($auditErrorMessage -Like "No AFAS account found*") {
-        if (-Not($dryRun -eq $True)) {
-            $success = $false
-            $auditLogs.Add([PSCustomObject]@{
-                    Action  = "EnableAccount"
-                    Message = "No AFAS account found with $($filterfieldid) $($filtervalue). Possibly deleted."
-                    IsError = $true
-                })
-        }
-        else {
-            Write-Warning "DryRun: No AFAS account found with $($filterfieldid) $($filtervalue). Possibly deleted."
-        }        
+        $success = $false
+        $auditLogs.Add([PSCustomObject]@{
+                Action  = "EnableAccount"
+                Message = "No AFAS account found with $($filterfieldid) $($filtervalue). Possibly deleted."
+                IsError = $true
+            })    
     }
     else {
         $success = $false  
@@ -153,10 +188,10 @@ if ($null -ne $currentAccount.Gebruiker) {
                 }
             }
         }
-        if($null -ne $account.'KnUser'.'Element'.'Fields'.'Site'){
+        if ($null -ne $account.'KnUser'.'Element'.'Fields'.'Site') {
             $updateAccount.'KnUser'.'Element'.'Fields'.'Site' = $account.'KnUser'.'Element'.'Fields'.'Site'
         }
-        if($null -ne $account.'KnUser'.'Element'.'Fields'.'InSi'){
+        if ($null -ne $account.'KnUser'.'Element'.'Fields'.'InSi') {
             $updateAccount.'KnUser'.'Element'.'Fields'.'InSi' = $account.'KnUser'.'Element'.'Fields'.'InSi'
         }
 
@@ -185,10 +220,23 @@ if ($null -ne $currentAccount.Gebruiker) {
     }
     catch {
         $ex = $PSItem
-        $verboseErrorMessage = $ex
-        Write-Verbose "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($verboseErrorMessage)"
+        if ( $($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
+            $errorObject = Resolve-HTTPError -Error $ex
     
-        $auditErrorMessage = Resolve-AFASErrorMessage -ErrorObject $ex
+            $verboseErrorMessage = $errorObject.ErrorMessage
+    
+            $auditErrorMessage = Resolve-AFASErrorMessage -ErrorObject $errorObject.ErrorMessage
+        }
+    
+        # If error message empty, fall back on $ex.Exception.Message
+        if ([String]::IsNullOrEmpty($verboseErrorMessage)) {
+            $verboseErrorMessage = $ex.Exception.Message
+        }
+        if ([String]::IsNullOrEmpty($auditErrorMessage)) {
+            $auditErrorMessage = $ex.Exception.Message
+        }
+    
+        Write-Verbose "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($verboseErrorMessage)"    
     
         $success = $false  
         $auditLogs.Add([PSCustomObject]@{
