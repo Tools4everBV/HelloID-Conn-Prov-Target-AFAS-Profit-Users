@@ -32,11 +32,32 @@
     }
   },
   {
+    "key": "updateUserOnCorrelate",
+    "type": "checkbox",
+    "defaultValue": false,
+    "templateOptions": {
+      "label": "Update User when correlating and mapped data differs from data in AFAS",
+      "required": false,
+      "description": "This will update AFAS users in the create action (not just correlate)."
+    }
+  },
+  {
     "key": "updateUserId",
     "type": "checkbox",
     "defaultValue": false,
     "templateOptions": {
-      "label": "Update User ID if it doesn't match naming convention",
+      "label": "Update User ID if it doesn't match mapped naming convention",
+      "required": false,
+      "description": "Use with care! This can break certain links in AFAS. Please consult AFAS first."
+    }
+  },
+  {
+    "key": "isDebug",
+    "type": "checkbox",
+    "defaultValue": false,
+    "templateOptions": {
+      "label": "Toggle debug logging",
+      "description": "When toggled, debug logging will be displayed",
       "required": false
     }
   }
