@@ -145,7 +145,7 @@ try {
         $propertiesChanged += @('EmAd')
     }
     if ($propertiesChanged) {
-        Write-Verbose "Account property(s) required to update: [$($propertiesChanged.name -join ",")]"
+        Write-Verbose "Account property(s) required to update: [$($propertiesChanged -join ",")]"
         $updateAction = 'Update'
     }
     else {
