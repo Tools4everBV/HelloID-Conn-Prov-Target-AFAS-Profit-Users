@@ -176,7 +176,7 @@ catch {
         $auditLogs.Add([PSCustomObject]@{
                 Action  = "DeleteAccount"
                 Message = "No AFAS account found with $($filterfieldid) $($filtervalue). Possibly already deleted, skipping action."
-                IsError = $true
+                IsError = $false
             })    
     }
     else {
