@@ -349,7 +349,7 @@ switch ($action) {
                             $updatedAccount = Invoke-RestMethod @splatWebRequest -Verbose:$false
                             # Set aRef object for use in futher actions
                             $aRef = [PSCustomObject]@{
-                                Gebruiker = $($account.knUser.Values.'@UsId')
+                                Gebruiker = $($currentAccount.Gebruiker)
                             }
             
                             $auditLogs.Add([PSCustomObject]@{
