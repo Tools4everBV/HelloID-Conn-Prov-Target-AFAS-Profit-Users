@@ -347,9 +347,10 @@ switch ($action) {
 
                         if (-not($dryRun -eq $true)) {
                             $updatedAccount = Invoke-RestMethod @splatWebRequest -Verbose:$false
+                            
                             # Set aRef object for use in futher actions
                             $aRef = [PSCustomObject]@{
-                                Gebruiker = $($currentAccount.Gebruiker)
+                                Gebruiker = $($updateAccountUserId.KnUser.Element.Fields.UsIdNew)
                             }
             
                             $auditLogs.Add([PSCustomObject]@{
@@ -456,9 +457,10 @@ switch ($action) {
 
                     if (-not($dryRun -eq $true)) {
                         $updatedAccount = Invoke-RestMethod @splatWebRequest -Verbose:$false
+
                         # Set aRef object for use in futher actions
                         $aRef = [PSCustomObject]@{
-                            Gebruiker = $($account.knUser.Values.'@UsId')
+                            Gebruiker = $($updateAccount.knUser.Values.'@UsId')
                         }
         
                         $auditLogs.Add([PSCustomObject]@{
