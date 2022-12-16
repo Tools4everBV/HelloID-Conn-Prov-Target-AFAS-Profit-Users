@@ -44,7 +44,7 @@ $account = [PSCustomObject]@{
                 # Mutatie code
                 'MtCd'    = 1
                 # Omschrijving
-                "Nm"      = $p.Accounts.MicrosoftActiveDirectory.displayName # Only used for new users, for existing users, the current displayname of the AFAS user is used
+                "Nm"      = $p.DisplayName # Only used for new users, for existing users, the current displayname of the AFAS user is used
 
                 # Nieuwe gebruikerscode
                 "UsIdNew" = $userId
