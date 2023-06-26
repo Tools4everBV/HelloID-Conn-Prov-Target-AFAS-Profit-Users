@@ -565,12 +565,12 @@ $result = [PSCustomObject]@{
 if ($UpnUpdated -eq $true) {
     $result.ExportData | Add-Member -MemberType NoteProperty -Name UPN -Value $($account.KnUser.Element.Fields.UPN) -Force
 }else{
-    $result.ExportData | Add-Member -MemberType NoteProperty -Name UPN -Value $($currentAccount.KnUser.Element.Fields.UPN) -Force
+    $result.ExportData | Add-Member -MemberType NoteProperty -Name UPN -Value $currentAccount.UPN -Force
 }
 if ($EmAdUpdated -eq $true) {
     $result.ExportData | Add-Member -MemberType NoteProperty -Name BusinessEmailAddress -Value $($account.KnUser.Element.Fields.EmAd) -Force
 }else{
-    $result.ExportData | Add-Member -MemberType NoteProperty -Name UPN -Value $($currentAccount.KnUser.Element.Fields.EmAd) -Force
+    $result.ExportData | Add-Member -MemberType NoteProperty -Name BusinessEmailAddress -Value $($currentAccount.Email_werk_gebruiker) -Force
 }
 
 
