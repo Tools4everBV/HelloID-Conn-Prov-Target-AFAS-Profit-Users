@@ -561,11 +561,17 @@ $result = [PSCustomObject]@{
     }
 }
 
-# Only add the data to ExportData if it has actually been updated, since we want to store the data HelloID has sent
-if ($UpnUpdated -eq $true -or $action -eq 'Create') {
+#add the data to ExportData if it has actually been updated by helloID. otherwise update the values in HelloID with the current value
+if ($UpnUpdated -eq $true) {
     $result.ExportData | Add-Member -MemberType NoteProperty -Name UPN -Value $($account.KnUser.Element.Fields.UPN) -Force
+}else{
+    $result.ExportData | Add-Member -MemberType NoteProperty -Name UPN -Value $currentAccount.UPN -Force
 }
-if ($EmAdUpdated -eq $true -or $action -eq 'Create') {
+if ($EmAdUpdated -eq $true) {
     $result.ExportData | Add-Member -MemberType NoteProperty -Name BusinessEmailAddress -Value $($account.KnUser.Element.Fields.EmAd) -Force
+}else{
+    $result.ExportData | Add-Member -MemberType NoteProperty -Name BusinessEmailAddress -Value $($currentAccount.Email_werk_gebruiker) -Force
 }
+
+
 Write-Output $result | ConvertTo-Json -Depth 10
