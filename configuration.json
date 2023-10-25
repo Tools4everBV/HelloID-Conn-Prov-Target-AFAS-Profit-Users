@@ -22,23 +22,43 @@
     }
   },
   {
-    "key": "RelationNumber",
+    "key": "GetConnector",
     "type": "input",
-    "defaultValue": "",
+    "defaultValue": "T4E_HelloID_Users_v2",
     "templateOptions": {
-      "label": "Relation number",
-      "placeholder": "12345",
+      "label": "GetConnector",
+      "placeholder": "T4E_HelloID_Users_v2",
       "required": true
     }
   },
   {
-    "key": "updateUserOnCorrelate",
+    "key": "UpdateConnector",
+    "type": "input",
+    "defaultValue": "KnUser",
+    "templateOptions": {
+      "label": "UpdateConnector",
+      "placeholder": "KnUser",
+      "required": true
+    }
+  },
+  {
+    "key": "createUser",
     "type": "checkbox",
     "defaultValue": false,
     "templateOptions": {
-      "label": "Update User when correlating and mapped data differs from data in AFAS",
+      "label": "Create user when not found",
       "required": false,
-      "description": "This will update AFAS users in the create action (not just correlate)."
+      "description": "When toggled, if the user account is not found, a new the AFAS user account will be created in the create action (only in the create action)."
+    }
+  },
+  {
+    "key": "updateOnCorrelate",
+    "type": "checkbox",
+    "defaultValue": false,
+    "templateOptions": {
+      "label": "Update on correlate",
+      "required": false,
+      "description": "When toggled, if the mapped data differs from data in AFAS, the AFAS user will be updated in the create action (not just correlated)."
     }
   },
   {
@@ -46,9 +66,9 @@
     "type": "checkbox",
     "defaultValue": false,
     "templateOptions": {
-      "label": "Update User ID if it doesn't match mapped naming convention",
+      "label": "Update User ID",
       "required": false,
-      "description": "Use with care! This can break certain links in AFAS. Please consult AFAS first."
+      "description": "When toggled, the User ID will be updated if it doesn't match mapped naming convention. Use with care! This can break certain links in AFAS. Please consult AFAS first."
     }
   },
   {
