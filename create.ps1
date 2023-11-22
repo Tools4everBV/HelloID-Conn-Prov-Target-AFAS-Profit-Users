@@ -36,9 +36,9 @@ $account = [PSCustomObject]@{
     # Omschrijving
     "Nm"   = $p.DisplayName # Only used for new users, for existing users, the current displayname of the AFAS user is used
     # E-mail
-    'EmAd' = $p.Accounts.MicrosoftAzureAD.UserPrincipalName
+    'EmAd' = $p.Accounts.MicrosoftActiveDirectory.mail
     # UPN - Vulling UPN afstemmen met AFAS beheer
-    'Upn'  = $p.Accounts.MicrosoftAzureAD.UserPrincipalName
+    'Upn'  = $p.Accounts.MicrosoftActiveDirectory.userPrincipalName
     # Wachtwoord
     "Pw"   = "GHJKL!!!23456gfdgf" # dummy pwd, not used, but required
 

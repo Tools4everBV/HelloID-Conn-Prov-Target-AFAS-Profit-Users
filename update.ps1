@@ -30,9 +30,9 @@ $account = [PSCustomObject]@{
     # Mutatie code
     'MtCd' = 1
     # E-mail
-    'EmAd' = $p.Accounts.MicrosoftAzureAD.UserPrincipalName
+    'EmAd' = $p.Accounts.MicrosoftActiveDirectory.mail
     # UPN - Vulling UPN afstemmen met AFAS beheer
-    'Upn'  = $p.Accounts.MicrosoftAzureAD.UserPrincipalName
+    'Upn'  = $p.Accounts.MicrosoftActiveDirectory.userPrincipalName
 }
 
 # Define account properties to update
