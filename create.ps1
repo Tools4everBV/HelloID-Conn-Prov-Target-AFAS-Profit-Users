@@ -67,6 +67,9 @@ $account = [PSCustomObject]@{
 
 # Define account properties to update
 $updateAccountFields = @("EmAd", "Upn") #@("UsId", "EmAd", "Upn")
+if($c.updateUserId -eq $true){
+    $updateAccountFields += "UsId"
+}
 
 # Define account properties to store in account data
 $storeAccountFields = @("UsId", "EmAd", "Upn")
