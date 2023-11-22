@@ -42,13 +42,13 @@
     }
   },
   {
-    "key": "createUser",
+    "key": "createAccount",
     "type": "checkbox",
     "defaultValue": false,
     "templateOptions": {
-      "label": "Create user when not found",
+      "label": "Create account when not found",
       "required": false,
-      "description": "When toggled, if the user account is not found, a new the AFAS user account will be created in the create action (only in the create action)."
+      "description": "When toggled, if the user account is not found, a new AFAS user account will be created in the create action (only in the create action)."
     }
   },
   {
