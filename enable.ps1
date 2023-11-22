@@ -111,17 +111,13 @@ function Get-ErrorMessage {
         }
 
         if ( $($ErrorObject.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or $($ErrorObject.Exception.GetType().FullName -eq 'System.Net.WebException')) {
-            $httpErrorObject = Resolve-HTTPError -ErrorObject $ErrorObject
-            
-            if(-not[String]::IsNullOrEmpty($httpErrorObject.ErrorMessage)){
-                $errorMessage.VerboseErrorMessage = $httpErrorObject.ErrorMessage
-                $errorMessage.AuditErrorMessage = Resolve-AFASErrorMessage -ErrorObject $httpErrorObject.ErrorMessage
-            }else{
-                $errorMessage.VerboseErrorMessage = $ErrorObject.Exception.Message
-                $errorMessage.AuditErrorMessage = $ErrorObject.Exception.Message
-            }
+            $httpErrorObject = Resolve-HTTPError -Error $ErrorObject
+
+            $errorMessage.VerboseErrorMessage = $httpErrorObject.ErrorMessage
+
+            $errorMessage.AuditErrorMessage = Resolve-AFASErrorMessage -ErrorObject $httpErrorObject.ErrorMessage
         }
-        
+
         # If error message empty, fall back on $ex.Exception.Message
         if ([String]::IsNullOrEmpty($errorMessage.VerboseErrorMessage)) {
             $errorMessage.VerboseErrorMessage = $ErrorObject.Exception.Message
@@ -346,17 +342,20 @@ try {
             break
         }
         'NoChanges' {
-            Write-Verbose "No changes needed for AFAS user [$($currentAccount.Gebruiker)]"
+            # Only log when fields are selected to update
+            if (($updateAccountFields | Measure-Object).Count -ge 1) {
+                Write-Verbose "No changes needed for AFAS user [$($currentAccount.Gebruiker)]"
 
-            if (-not($dryRun -eq $true)) {
-                $auditLogs.Add([PSCustomObject]@{
-                        # Action  = "" # Optional
-                        Message = "No changes needed for AFAS user [$($currentAccount.Gebruiker)]"
-                        IsError = $false
-                    })
-            }
-            else {
-                Write-Warning "DryRun: No changes needed for AFAS user [$($currentAccount.Gebruiker)]"
+                if (-not($dryRun -eq $true)) {
+                    $auditLogs.Add([PSCustomObject]@{
+                            # Action  = "" # Optional
+                            Message = "No changes needed for AFAS user [$($currentAccount.Gebruiker)]"
+                            IsError = $false
+                        })
+                }
+                else {
+                    Write-Warning "DryRun: No changes needed for AFAS user [$($currentAccount.Gebruiker)]"
+                }
             }
 
             break
