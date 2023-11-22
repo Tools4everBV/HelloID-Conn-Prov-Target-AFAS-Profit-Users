@@ -72,7 +72,7 @@ The following settings are required to connect to the API.
 | Token in XML format         | The AppConnector token to connect to AFAS  | Yes       |
 | Get Connector               | The GetConnector in AFAS to query the user with  | Yes       |
 | Update Connector            | The UpdateConnector in AFAS to update the user with  | Yes       |
-| Create user when not found  | When toggled, if the user account is not found, a new the AFAS user account will be created in the create action (only in the create action). | No        |
+| Create account when not found  | When toggled, if the user account is not found, a new the AFAS user account will be created in the create action (only in the create action). | No        |
 | Update on correlate         | When toggled, if the mapped data differs from data in AFAS, the AFAS user will be updated in the create action (not just correlated). | No        |
 | Update User ID              | When toggled, the User ID will be updated if it doesn't match mapped naming convention. **Note that this is not advised as this can break certain links in AFAS. Use with care!** | No        |
 | Toggle debug logging        | When toggled, extra logging is shown. Note that this is only meant for debugging, please switch this off when in production.                                  | No        |
