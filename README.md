@@ -26,6 +26,7 @@ Repository for HelloID Provisioning Target Connector to AFAS Users
       - [Remarks](#remarks)
       - [Scope](#scope)
     - [UpdateConnector](#updateconnector)
+    - [Remarks](#remarks-1)
   - [Getting help](#getting-help)
   - [HelloID docs](#helloid-docs)
 
@@ -105,6 +106,9 @@ The data collection can be changed by the customer itself to meet their requirem
 In addition to use to the above get-connector, the connector also uses the following build-in Profit update-connectors:
 
 *	KnUser
+
+### Remarks
+- When using the permissions, you may encounter the error "De gegevens zijn inmiddels gewijzigd door een andere gebruiker" (The data has been modified by another user). This issue arises primarily due to the rapid succession of actions. To resolve this, consider configuring concurrent actions to limit the number of simultaneous operations that can be executed for an individual person.
 
 ## Getting help
 > _For more information on how to configure a HelloID PowerShell connector, please refer to our [documentation](https://docs.helloid.com/hc/en-us/articles/360012558020-Configure-a-custom-PowerShell-target-system) pages_
