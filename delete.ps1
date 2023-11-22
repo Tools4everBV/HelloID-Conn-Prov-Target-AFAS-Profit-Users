@@ -238,7 +238,7 @@ try {
 
         $body = ($disableAccount | ConvertTo-Json -Depth 10)
         $splatWebRequest = @{
-            Uri             = "$($c.BaseUri)/connectors/$($updateConnector)"
+            Uri             = "$($c.BaseUri)/connectors/$($c.UpdateConnector)"
             Headers         = $headers
             Method          = 'PUT'
             Body            = ([System.Text.Encoding]::UTF8.GetBytes($body))
