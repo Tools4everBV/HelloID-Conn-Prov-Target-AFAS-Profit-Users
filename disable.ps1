@@ -1,62 +1,46 @@
 #####################################################
 # HelloID-Conn-Prov-Target-AFAS-Profit-Users-Disable
 #
-# Version: 2.0.0
+# Version: 2.1.0
 #####################################################
 # Initialize default values
 $c = $configuration | ConvertFrom-Json
 $p = $person | ConvertFrom-Json
 $aRef = $accountReference | ConvertFrom-Json
-$success = $true # Set to true at start, because only when an error occurs it is set to false
+$success = $false # Set to false at start, at the end, only when no error occurs it is set to true
 $auditLogs = [System.Collections.Generic.List[PSCustomObject]]::new()
 
 # Set TLS to accept TLS, TLS 1.1 and TLS 1.2
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls -bor [Net.SecurityProtocolType]::Tls11 -bor [Net.SecurityProtocolType]::Tls12
 
-$VerbosePreference = "SilentlyContinue"
+# Set debug logging
+switch ($($c.isDebug)) {
+    $true { $VerbosePreference = "Continue" }
+    $false { $VerbosePreference = "SilentlyContinue" }
+}
 $InformationPreference = "Continue"
 $WarningPreference = "Continue"
 
-# Set debug logging
-switch ($($c.isDebug)) {
-    $true { $VerbosePreference = 'Continue' }
-    $false { $VerbosePreference = 'SilentlyContinue' }
-}
-
-# Used to connect to AFAS API endpoints
-$BaseUri = $c.BaseUri
-$Token = $c.Token
-$getConnector = "T4E_HelloID_Users_v2"
-$updateConnector = "KnUser"
+# Correlation values
+$correlationProperty = "Gebruiker" # Has to match the name of the unique identifier
+$correlationValue = $aRef.Gebruiker # Has to match the value of the unique identifier
 
 #Change mapping here
 $account = [PSCustomObject]@{
-    'KnUser' = @{
-        'Element' = @{
-            'Fields' = @{
-                # Mutatie code
-                'MtCd' = 6
+    # Mutatie code
+    'MtCd' = 2
 
-                # E-mail (when setting OutSite to true an email address is required)
-                'EmAd' = "$($p.ExternalId)@enyoi.nl" # or e.g. $p.Contact.Personal.Email
-
-                # OutSite
-                "Site" = $true
-                # InSite
-                "InSi" = $false
-            }
-        }
-    }
+    # E-mail
+    'EmAd' = $p.Accounts.MicrosoftActiveDirectory.mail
+    # UPN - Vulling UPN afstemmen met AFAS beheer
+    'Upn'  = $p.Accounts.MicrosoftActiveDirectory.userPrincipalName
 }
 
-# # Troubleshooting
-# $aRef = @{
-#    Gebruiker = "45963.AndreO"
-# }
-# $dryRun = $false
+# Define account properties to update
+$updateAccountFields = @("EmAd", "Upn")
 
-$filterfieldid = "Gebruiker"
-$filtervalue = $aRef.Gebruiker # Has to match the AFAS value of the specified filter field ($filterfieldid)
+# Define account properties to store in account data
+$storeAccountFields = @("EmAd", "Upn")
 
 #region functions
 function Resolve-HTTPError {
@@ -111,95 +95,212 @@ function Resolve-AFASErrorMessage {
         Write-Output $errorMessage
     }
 }
+
+function Get-ErrorMessage {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory,
+            ValueFromPipeline
+        )]
+        [object]$ErrorObject
+    )
+    process {
+        $errorMessage = [PSCustomObject]@{
+            VerboseErrorMessage = $null
+            AuditErrorMessage   = $null
+        }
+
+        if ( $($ErrorObject.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or $($ErrorObject.Exception.GetType().FullName -eq 'System.Net.WebException')) {
+            $httpErrorObject = Resolve-HTTPError -ErrorObject $ErrorObject
+            
+            if (-not[String]::IsNullOrEmpty($httpErrorObject.ErrorMessage)) {
+                $errorMessage.VerboseErrorMessage = $httpErrorObject.ErrorMessage
+                $errorMessage.AuditErrorMessage = Resolve-AFASErrorMessage -ErrorObject $httpErrorObject.ErrorMessage
+            }
+            else {
+                $errorMessage.VerboseErrorMessage = $ErrorObject.Exception.Message
+                $errorMessage.AuditErrorMessage = $ErrorObject.Exception.Message
+            }
+        }
+        
+        # If error message empty, fall back on $ex.Exception.Message
+        if ([String]::IsNullOrEmpty($errorMessage.VerboseErrorMessage)) {
+            $errorMessage.VerboseErrorMessage = $ErrorObject.Exception.Message
+        }
+        if ([String]::IsNullOrEmpty($errorMessage.AuditErrorMessage)) {
+            $errorMessage.AuditErrorMessage = $ErrorObject.Exception.Message
+        }
+
+        Write-Output $errorMessage
+    }
+}
 #endregion functions
 
-# Get current AFAS employee and verify if a user must be either [created], [updated and correlated] or just [correlated]
 try {
-    Write-Verbose "Querying AFAS employee with $($filterfieldid) $($filtervalue)"
+    # Get current account and verify if there are changes
+    try {
+        Write-Verbose "Querying AFAS user where [$($correlationProperty)] = [$($correlationValue)]"
 
-    # Create authorization headers
-    $encodedToken = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($Token))
-    $authValue = "AfasToken $encodedToken"
-    $Headers = @{ Authorization = $authValue }
-    $Headers.Add("IntegrationId", "45963_140664") # Fixed value - Tools4ever Partner Integration ID
+        # Create authorization headers
+        $encodedToken = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($($c.Token)))
+        $authValue = "AfasToken $encodedToken"
+        $Headers = @{ Authorization = $authValue }
+        $Headers.Add("IntegrationId", "45963_140664") # Fixed value - Tools4ever Partner Integration ID
 
-    $splatWebRequest = @{
-        Uri             = $BaseUri + "/connectors/" + $getConnector + "?filterfieldids=$filterfieldid&filtervalues=$filtervalue&operatortypes=1"
-        Headers         = $headers
-        Method          = 'GET'
-        ContentType     = "application/json;charset=utf-8"
-        UseBasicParsing = $true
+        $splatWebRequest = @{
+            Uri             = "$($c.BaseUri)/connectors/$($c.GetConnector)?filterfieldids=$($correlationProperty)&filtervalues=$($correlationValue)&operatortypes=1"
+            Headers         = $headers
+            Method          = 'GET'
+            ContentType     = "application/json;charset=utf-8"
+            UseBasicParsing = $true
+        }
+        $currentAccount = (Invoke-RestMethod @splatWebRequest -Verbose:$false).rows
+
+        if ($null -eq $currentAccount.Gebruiker) {
+            throw "No AFAS user found where [$($correlationProperty)] = [$($correlationValue)]"
+        }
+        else {
+            # Create previous account object to compare current data with specified account data
+            $previousAccount = [PSCustomObject]@{
+                # E-mail
+                'EmAd' = $currentAccount.Email_werk_gebruiker
+                # UPN
+                'Upn'  = $currentAccount.UPN
+            }
+
+            # Calculate changes between current data and provided data
+            $splatCompareProperties = @{
+                ReferenceObject  = @($previousAccount.PSObject.Properties | Where-Object { $_.Name -in $updateAccountFields }) # Only select the properties to update
+                DifferenceObject = @($account.PSObject.Properties | Where-Object { $_.Name -in $updateAccountFields }) # Only select the properties to update
+            }
+            $changedProperties = $null
+            $changedProperties = (Compare-Object @splatCompareProperties -PassThru)
+            $oldProperties = $changedProperties.Where( { $_.SideIndicator -eq '<=' })
+            $newProperties = $changedProperties.Where( { $_.SideIndicator -eq '=>' })
+
+            if (($newProperties | Measure-Object).Count -ge 1) {
+                Write-Verbose "Changed properties: $($changedProperties | ConvertTo-Json)"
+
+                $updateAction = 'Update'
+            }
+            else {
+                Write-Verbose "No changed properties"
+
+                $updateAction = 'NoChanges'
+            }
+        }
     }
-    $currentAccount = (Invoke-RestMethod @splatWebRequest -Verbose:$false).rows
+    catch {
+        $ex = $PSItem
+        $errorMessage = Get-ErrorMessage -ErrorObject $ex
 
-    if ($null -eq $currentAccount.Gebruiker) {
-        throw "No AFAS account found with $($filterfieldid) $($filtervalue)"
+        Write-Verbose "Error at Line [$($ex.InvocationInfo.ScriptLineNumber)]: $($ex.InvocationInfo.Line). Error: $($errorMessage.VerboseErrorMessage)"
+
+        if ($errorMessage.AuditErrorMessage -Like "*No AFAS user found*") {
+            $auditLogs.Add([PSCustomObject]@{
+                    # Action  = "" # Optional
+                    Message = "No AFAS user found where [$($correlationProperty)] = [$($aRef.Gebruiker)]. Possibly already deleted, skipping action."
+                    IsError = $false
+                })
+        }
+        else {
+            $auditLogs.Add([PSCustomObject]@{
+                    # Action  = "" # Optional
+                    Message = "Error querying AFAS user where [$($correlationProperty)] = [$($aRef.Gebruiker)]. Error Message: $($errorMessage.AuditErrorMessage)"
+                    IsError = $true
+                })
+        }
+
+        # Skip further actions, as this is a critical error
+        continue
     }
 
-    # Check if current EmAd has a different value from mapped value. AFAS will throw an error when trying to update this with the same value
-    if ($currentAccount.Email_werk_gebruiker -ne $account.'KnUser'.'Element'.'Fields'.'EmAd' -and $null -ne $account.'KnUser'.'Element'.'Fields'.'EmAd') {
-        $propertiesChanged += @('EmAd')
-    }
-    if ($propertiesChanged) {
-        Write-Verbose "Account property(s) required to update: [$($propertiesChanged -join ",")]"
-        $updateAction = 'Update'
-    }
-    else {
-        $updateAction = 'NoChanges'
-    }
-}
-catch {
-    $ex = $PSItem
-    if ( $($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
-        $errorObject = Resolve-HTTPError -Error $ex
+    # Disable AFAS User
+    try {
+        # Create custom account object for disable and set with properties for disable only
+        $disableAccount = [PSCustomObject]@{
+            'KnUser' = @{
+                'Element' = @{
+                    # Gebruiker
+                    '@UsId'  = $currentAccount.Gebruiker
+                    'Fields' = @{
+                        # Mutatie code
+                        'MtCd' = $account.MtCd
+                        # Omschrijving
+                        "Nm"   = $currentAccount.DisplayName
+                    }
+                }
+            }
+        }
 
-        $verboseErrorMessage = $errorObject.ErrorMessage
+        $body = ($disableAccount | ConvertTo-Json -Depth 10)
+        $splatWebRequest = @{
+            Uri             = "$($c.BaseUri)/connectors/$($c.UpdateConnector)"
+            Headers         = $headers
+            Method          = 'PUT'
+            Body            = ([System.Text.Encoding]::UTF8.GetBytes($body))
+            ContentType     = "application/json;charset=utf-8"
+            UseBasicParsing = $true
+        }
+        
+        if (-not($dryRun -eq $true)) {
+            Write-Verbose "Disabling AFAS user [$($currentAccount.Gebruiker)]"
 
-        $auditErrorMessage = Resolve-AFASErrorMessage -ErrorObject $errorObject.ErrorMessage
+            $disabledAccount = Invoke-RestMethod @splatWebRequest -Verbose:$false
+
+            $auditLogs.Add([PSCustomObject]@{
+                    # Action  = "" # Optional
+                    Message = "Successfully disabled AFAS user [$($currentAccount.Gebruiker)]"
+                    IsError = $false
+                })
+        }
+        else {
+            Write-Warning "DryRun: Would disable AFAS user [$($currentAccount.Gebruiker)]"
+        }
     }
+    catch {
+        $ex = $PSItem
+        $errorMessage = Get-ErrorMessage -ErrorObject $ex
+        
+        Write-Verbose "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($errorMessage.VerboseErrorMessage)"
 
-    # If error message empty, fall back on $ex.Exception.Message
-    if ([String]::IsNullOrEmpty($verboseErrorMessage)) {
-        $verboseErrorMessage = $ex.Exception.Message
-    }
-    if ([String]::IsNullOrEmpty($auditErrorMessage)) {
-        $auditErrorMessage = $ex.Exception.Message
-    }
-
-    Write-Verbose "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($verboseErrorMessage)"
-
-    if ($auditErrorMessage -Like "No AFAS account found*") {
         $auditLogs.Add([PSCustomObject]@{
-                Action  = "DisableAccount"
-                Message = "No AFAS account found with $($filterfieldid) $($filtervalue). Possibly already deleted, skipping action."
-                IsError = $false
+                # Action  = "" # Optional
+                Message = "Error disabling AFAS user [$($currentAccount.Gebruiker)]. Error Message: $($errorMessage.AuditErrorMessage)"
+                IsError = $true
             })
     }
-    else {
-        $success = $false  
-        $auditLogs.Add([PSCustomObject]@{
-                Action  = "DisableAccount"
-                Message = "Error querying AFAS account with $($filterfieldid) $($filtervalue). Error Message: $auditErrorMessage"
-                IsError = $True
-            })
-    }
-}
 
-# Update AFAS Account
-if ($null -ne $currentAccount.Gebruiker) {
     switch ($updateAction) {
         'Update' {
+            # Update AFAS User
             try {
-                Write-Verbose "Updating AFAS account with userId '$($currentAccount.Gebruiker)'"
+                # Create custom object with old and new values
+                $changedPropertiesObject = [PSCustomObject]@{
+                    OldValues = @{}
+                    NewValues = @{}
+                }
 
-                # Create custom account object for update
+                # Add the old properties to the custom object with old and new values
+                foreach ($oldProperty in ($oldProperties | Where-Object { $_.Name -in $newProperties.Name })) {
+                    $changedPropertiesObject.OldValues.$($oldProperty.Name) = $oldProperty.Value
+                }
+
+                # Add the new properties to the custom object with old and new values
+                foreach ($newProperty in $newProperties) {
+                    $changedPropertiesObject.NewValues.$($newProperty.Name) = $newProperty.Value
+                }
+                Write-Verbose "Changed properties: $($changedPropertiesObject | ConvertTo-Json)"
+
+                # Create custom account object for update and set with default properties and values
                 $updateAccount = [PSCustomObject]@{
                     'KnUser' = @{
                         'Element' = @{
+                            # Gebruiker
                             '@UsId'  = $currentAccount.Gebruiker
                             'Fields' = @{
                                 # Mutatie code
-                                'MtCd' = $account.'KnUser'.'Element'.'Fields'.'MtCd'
+                                'MtCd' = $account.MtCd
                                 # Omschrijving
                                 "Nm"   = $currentAccount.DisplayName
                             }
@@ -207,22 +308,14 @@ if ($null -ne $currentAccount.Gebruiker) {
                     }
                 }
 
-                # Check if current EmAd has a different value from mapped value. AFAS will throw an error when trying to update this with the same value
-                if ('EmAd' -in $propertiesChanged) {
-                    # E-mail                       
-                    $updateAccount.'KnUser'.'Element'.'Fields'.'EmAd' = $account.'KnUser'.'Element'.'Fields'.'EmAd'
-                    $EmAdUpdated = $true
-                    if (-not($dryRun -eq $true)) {
-                        Write-Information "Updating EmAd '$($currentAccount.Email_werk_gebruiker)' with new value '$($updateAccount.'KnUser'.'Element'.'Fields'.'EmAd')'"
-                    }
-                    else {
-                        Write-Warning "DryRun: Would update EmAd '$($currentAccount.Email_werk_gebruiker)' with new value '$($updateAccount.'KnUser'.'Element'.'Fields'.'EmAd')'"
-                    }
+                # Add the updated properties to the custom account object for update
+                foreach ($newProperty in $newProperties) {
+                    $updateAccount.KnUser.Element.Fields.$($newProperty.Name) = $newProperty.Value
                 }
 
                 $body = ($updateAccount | ConvertTo-Json -Depth 10)
                 $splatWebRequest = @{
-                    Uri             = $BaseUri + "/connectors/" + $updateConnector
+                    Uri             = "$($c.BaseUri)/connectors/$($c.UpdateConnector)"
                     Headers         = $headers
                     Method          = 'PUT'
                     Body            = ([System.Text.Encoding]::UTF8.GetBytes($body))
@@ -231,153 +324,84 @@ if ($null -ne $currentAccount.Gebruiker) {
                 }
 
                 if (-not($dryRun -eq $true)) {
+                    Write-Verbose "Updating AFAS user [$($currentAccount.Gebruiker)]. Old values: $($changedPropertiesObject.oldValues | ConvertTo-Json -Depth 10). New values: $($changedPropertiesObject.newValues | ConvertTo-Json -Depth 10)"
+                            
                     $updatedAccount = Invoke-RestMethod @splatWebRequest -Verbose:$false
 
                     $auditLogs.Add([PSCustomObject]@{
-                            Action  = "UpdateAccount"
-                            Message = "Successfully updated AFAS account with userId '$($aRef.Gebruiker)'"
+                            # Action  = "" # Optional
+                            Message = "Successfully updated AFAS user [$($currentAccount.Gebruiker)]. Old values: $($changedPropertiesObject.oldValues | ConvertTo-Json -Depth 10). New values: $($changedPropertiesObject.newValues | ConvertTo-Json -Depth 10)"
                             IsError = $false
                         })
                 }
                 else {
-                    Write-Warning "DryRun: Would update AFAS account with userId '$($currentAccount.Gebruiker)'"
+                    Write-Warning "DryRun: Would update AFAS user [$($currentAccount.Gebruiker)]. Old values: $($changedPropertiesObject.oldValues | ConvertTo-Json -Depth 10). New values: $($changedPropertiesObject.newValues | ConvertTo-Json -Depth 10)"
                 }
+
                 break
             }
             catch {
                 $ex = $PSItem
-                if ( $($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
-                    $errorObject = Resolve-HTTPError -Error $ex
-            
-                    $verboseErrorMessage = $errorObject.ErrorMessage
-            
-                    $auditErrorMessage = Resolve-AFASErrorMessage -ErrorObject $errorObject.ErrorMessage
-                }
-            
-                # If error message empty, fall back on $ex.Exception.Message
-                if ([String]::IsNullOrEmpty($verboseErrorMessage)) {
-                    $verboseErrorMessage = $ex.Exception.Message
-                }
-                if ([String]::IsNullOrEmpty($auditErrorMessage)) {
-                    $auditErrorMessage = $ex.Exception.Message
-                }
-            
-                Write-Verbose "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($verboseErrorMessage)"            
-            
-                $success = $false  
+                $errorMessage = Get-ErrorMessage -ErrorObject $ex
+                    
+                Write-Verbose "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($errorMessage.VerboseErrorMessage)"
+                
                 $auditLogs.Add([PSCustomObject]@{
-                        Action  = "UpdateAccount"
-                        Message = "Error updating AFAS account with userId '$($currentAccount.Gebruiker)'. Error Message: $auditErrorMessage"
-                        IsError = $True
+                        # Action  = "" # Optional
+                        Message = "Error updating AFAS user [$($currentAccount.Gebruiker)]. Error Message: $($errorMessage.AuditErrorMessage). Old values: $($changedPropertiesObject.oldValues | ConvertTo-Json -Depth 10). New values: $($changedPropertiesObject.newValues | ConvertTo-Json -Depth 10)"
+                        IsError = $true
                     })
             }
+
+            break
         }
         'NoChanges' {
-            Write-Verbose "No changes to AFAS account with userId '$($currentAccount.Gebruiker)'"
+            # Only log when fields are selected to update
+            if (($updateAccountFields | Measure-Object).Count -ge 1) {
+                Write-Verbose "No changes needed for AFAS user [$($currentAccount.Gebruiker)]"
 
-            if (-not($dryRun -eq $true)) {
-                $auditLogs.Add([PSCustomObject]@{
-                        Action  = "UpdateAccount"
-                        Message = "Successfully updated AFAS account with userId '$($aRef.Gebruiker)'. (No Changes needed)"
-                        IsError = $false
-                    })
+                if (-not($dryRun -eq $true)) {
+                    $auditLogs.Add([PSCustomObject]@{
+                            # Action  = "" # Optional
+                            Message = "No changes needed for AFAS user [$($currentAccount.Gebruiker)]"
+                            IsError = $false
+                        })
+                }
+                else {
+                    Write-Warning "DryRun: No changes needed for AFAS user [$($currentAccount.Gebruiker)]"
+                }
             }
-            else {
-                Write-Warning "DryRun: No changes to AFAS account with userId '$($currentAccount.Gebruiker)'"
-            }
+
             break
         }
     }
-    
-    try {
-        Write-Verbose "Disabling AFAS account with userId '$($currentAccount.Gebruiker)'"
 
-        # Create custom account object for update
-        $updateAccount = [PSCustomObject]@{
-            'KnUser' = @{
-                'Element' = @{
-                    '@UsId'  = $currentAccount.Gebruiker
-                    'Fields' = @{
-                        # Mutatie code
-                        'MtCd' = $account.'KnUser'.'Element'.'Fields'.'MtCd'
-                        # Omschrijving
-                        "Nm"   = $currentAccount.DisplayName
-                    }
-                }
-            }
-        }
-        if ($null -ne $account.'KnUser'.'Element'.'Fields'.'Site') {
-            $updateAccount.'KnUser'.'Element'.'Fields'.'Site' = $account.'KnUser'.'Element'.'Fields'.'Site'
-        }
-        if ($null -ne $account.'KnUser'.'Element'.'Fields'.'InSi') {
-            $updateAccount.'KnUser'.'Element'.'Fields'.'InSi' = $account.'KnUser'.'Element'.'Fields'.'InSi'
-        }
-        
-        $body = ($updateAccount | ConvertTo-Json -Depth 10)
-        $splatWebRequest = @{
-            Uri             = $BaseUri + "/connectors/" + $updateConnector
-            Headers         = $headers
-            Method          = 'PUT'
-            Body            = ([System.Text.Encoding]::UTF8.GetBytes($body))
-            ContentType     = "application/json;charset=utf-8"
-            UseBasicParsing = $true
-        }
-
-        if (-not($dryRun -eq $true)) {
-            $updatedAccount = Invoke-RestMethod @splatWebRequest -Verbose:$false
-
-            $auditLogs.Add([PSCustomObject]@{
-                    Action  = "DisableAccount"
-                    Message = "Successfully disabled AFAS account with userId '$($aRef.Gebruiker)'"
-                    IsError = $false
-                })
-        }
-        else {
-            Write-Warning "DryRun: Would disable AFAS account with userId '$($currentAccount.Gebruiker)'"
-        }
-    }
-    catch {
-        $ex = $PSItem
-        if ( $($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
-            $errorObject = Resolve-HTTPError -Error $ex
-    
-            $verboseErrorMessage = $errorObject.ErrorMessage
-    
-            $auditErrorMessage = Resolve-AFASErrorMessage -ErrorObject $errorObject.ErrorMessage
-        }
-    
-        # If error message empty, fall back on $ex.Exception.Message
-        if ([String]::IsNullOrEmpty($verboseErrorMessage)) {
-            $verboseErrorMessage = $ex.Exception.Message
-        }
-        if ([String]::IsNullOrEmpty($auditErrorMessage)) {
-            $auditErrorMessage = $ex.Exception.Message
-        }
-    
-        Write-Verbose "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($verboseErrorMessage)"    
-    
-        $success = $false  
-        $auditLogs.Add([PSCustomObject]@{
-                Action  = "DisableAccount"
-                Message = "Error disabling AFAS account with userId '$($currentAccount.Gebruiker)'. Error Message: $auditErrorMessage"
-                IsError = $True
-            })
+    # Define ExportData with account fields and correlation property 
+    $exportData = $account.PsObject.Copy() | Select-Object $storeAccountFields
+    # Add correlation property to exportdata
+    $exportData | Add-Member -MemberType NoteProperty -Name $correlationProperty -Value $correlationValue -Force
+    # Add aRef properties to exportdata
+    foreach ($aRefProperty in $aRef.PSObject.Properties) {
+        $exportData | Add-Member -MemberType NoteProperty -Name $aRefProperty.Name -Value $aRefProperty.Value -Force
     }
 }
-
-# Send results
-$result = [PSCustomObject]@{
-    Success          = $success
-    AccountReference = $aRef
-    AuditLogs        = $auditLogs
-    Account          = $account
-
-    # Optionally return data for use in other systems
-    ExportData       = [PSCustomObject]@{
-        Gebruiker = $aRef.Gebruiker
+finally {
+    # Check if auditLogs contains errors, if no errors are found, set success to true
+    if (-NOT($auditLogs.IsError -contains $true)) {
+        $success = $true
     }
+    
+    # Send results
+    $result = [PSCustomObject]@{
+        Success          = $success
+        AccountReference = $aRef
+        AuditLogs        = $auditLogs
+        PreviousAccount  = $previousAccount
+        Account          = $account
+    
+        # Optionally return data for use in other systems
+        ExportData       = $exportData
+    }
+    
+    Write-Output ($result | ConvertTo-Json -Depth 10)  
 }
-if ($EmAdUpdated -eq $true) {
-    $result.ExportData | Add-Member -MemberType NoteProperty -Name BusinessEmailAddress -Value $($account.KnUser.Element.Fields.EmAd) -Force
-}
-Write-Output $result | ConvertTo-Json -Depth 10
