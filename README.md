@@ -26,7 +26,6 @@ Repository for HelloID Provisioning Target Connector to AFAS Users
       - [Remarks](#remarks)
       - [Scope](#scope)
     - [UpdateConnector](#updateconnector)
-    - [Remarks](#remarks-1)
   - [Getting help](#getting-help)
   - [HelloID docs](#helloid-docs)
 
@@ -44,9 +43,6 @@ The HelloID connector consists of the template scripts shown in the following ta
 | update.ps1                         | Update AFAS user                                   | Update with the specified properties, e.g. **"EmAd", "Upn"**, etc. The **default example sets these with the AD values**. This action is perfomed with **entry code "1"**. For more information on the entry codes, see the [AFAS documenation](https://help.afas.nl/help/en/SE/App_Conect_UpdDsc_KnUser.htm)                                                                       |
 | disable.ps1                        | Block and optinally update AFAS user               | Optionally, you can provide additional properties to update, e.g. **"EmAd", "Upn"**.  The **default example clears these values**, as the values have to be unique over all AFAS environments. This action is perfomed with **entry code "2"**. For more information on the entry codes, see the [AFAS documenation](https://help.afas.nl/help/en/SE/App_Conect_UpdDsc_KnUser.htm). |
 | delete.ps1                         | Block, remove from all groups and update AFAS user | Optionally, you can provide additional properties to update, e.g. **"EmAd", "Upn"**.  The **default example clears these values**, as the values have to be unique over all AFAS environments. This action is perfomed with **entry code "0"**. For more information on the entry codes, see the [AFAS documenation](https://help.afas.nl/help/en/SE/App_Conect_UpdDsc_KnUser.htm). |
-| permissions.ps1       | List the possible permissions to select as entitlements         |   |
-| grantPermission.ps1         | Grant permission to AFAS user           | This action is perfomed with **entry code "1"**. For more information on the entry codes, see the [AFAS documenation](https://help.afas.nl/help/en/SE/App_Conect_UpdDsc_KnUser.htm).  |
-| revokePermission.ps1        | Revoke permission from AFAS user          | This action is perfomed with **entry code "1"**. For more information on the entry codes, see the [AFAS documenation](https://help.afas.nl/help/en/SE/App_Conect_UpdDsc_KnUser.htm).  |
 
 <!-- GETTING STARTED -->
 ## Getting Started
@@ -106,9 +102,6 @@ The data collection can be changed by the customer itself to meet their requirem
 In addition to use to the above get-connector, the connector also uses the following build-in Profit update-connectors:
 
 *	KnUser
-
-### Remarks
-- When using the permissions, you may encounter the error "De gegevens zijn inmiddels gewijzigd door een andere gebruiker" (The data has been modified by another user). This issue arises primarily due to the rapid succession of actions. To resolve this, consider configuring concurrent actions to limit the number of simultaneous operations that can be executed for an individual person.
 
 ## Getting help
 > _For more information on how to configure a HelloID PowerShell connector, please refer to our [documentation](https://docs.helloid.com/hc/en-us/articles/360012558020-Configure-a-custom-PowerShell-target-system) pages_
