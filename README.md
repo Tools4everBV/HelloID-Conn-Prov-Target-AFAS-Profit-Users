@@ -6,6 +6,14 @@ Repository for HelloID Provisioning Target Connector to AFAS Users
 <a href="https://github.com/Tools4everBV/HelloID-Conn-Prov-Target-AFAS-Profit-Users/issues"><img src="https://img.shields.io/github/issues/Tools4everBV/HelloID-Conn-Prov-Target-AFAS-Profit-Users" alt="Issues Badge"/></a>
 <a href="https://github.com/Tools4everBV/HelloID-Conn-Prov-Target-AFAS-Profit-Users/graphs/contributors"><img alt="GitHub contributors" src="https://img.shields.io/github/contributors/Tools4everBV/HelloID-Conn-Prov-Target-AFAS-Profit-Users?color=2b9348"></a>
 
+| :warning: Warning |
+| :---------------- |
+| This readme is not updated. This will be done in combination with the import/export file for powershell V2 |
+
+| :warning: Warning |
+| :---------------- |
+| This script is for the new powershell connector. Make sure to use the mapping and correlation keys like mentionded in this readme. For more information, please read our [documentation](https://docs.helloid.com/en/provisioning/target-systems/powershell-v2-target-systems.html) |
+
 | :information_source: Information  |
 | --------------------------------  |
 | This repository contains the connector and configuration code only. The implementer is responsible to acquire the connection details such as username, password, certificate, etc. You might even need to sign a contract or agreement with the supplier before implementing this connector. Please contact the client's application manager to coordinate the connector requirements.  |
