@@ -83,6 +83,10 @@ To properly setup the correlation:
 
 The field mapping can be imported by using the [_fieldMapping.json_](./fieldMapping.json) file.
 
+> [!NOTE]
+> Fill in the correct customer code in the field mapping for `UsId`.
+
+
 ### Connection settings
 
 The following settings are required to connect to the API.
