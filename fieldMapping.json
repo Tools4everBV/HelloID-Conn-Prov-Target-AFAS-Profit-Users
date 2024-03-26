@@ -310,6 +310,7 @@
       "MappingActions": [
         {
           "MapForActions": [
+            "Create",
             "Update"
           ],
           "MappingMode": "Complex",
