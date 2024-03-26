@@ -314,7 +314,7 @@
             "Update"
           ],
           "MappingMode": "Complex",
-          "Value": "\"function getUsId() {\\n    let UsId = '45963' + '.' + Person.ExternalId;\\n    return UsId;\\n}\\n\\ngetUsId();\"",
+          "Value": "\"function getUsId() {\\n    let UsId = '<CustomerCode>' + '.' + Person.ExternalId;\\n    return UsId;\\n}\\n\\ngetUsId();\"",
           "UsedInNotifications": false,
           "StoreInAccountData": true
         }
