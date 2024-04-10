@@ -135,6 +135,12 @@ try {
     if ($account.PSObject.Properties.Name -Contains 'Upn') {
         $updateAccountFields += "Upn"
     }
+    if ($account.PSObject.Properties.Name -Contains 'Site') {
+        $updateAccountFields += "Site"
+    }
+    if ($account.PSObject.Properties.Name -Contains 'InSi') {
+        $updateAccountFields += "InSi"
+    }
 
     # Verify if [aRef] has a value
     if ([string]::IsNullOrEmpty($($actionContext.References.Account))) {
@@ -176,6 +182,10 @@ try {
                 'EmAd' = $currentAccount.Email_werk_gebruiker
                 # UPN
                 'Upn'  = $currentAccount.UPN
+                # Outsite
+                "Site" = [String]$currentAccount.OutSite
+                # InSite
+                "InSi" = [String]$currentAccount.InSite
             }
 
             # Calculate changes between current data and provided data
