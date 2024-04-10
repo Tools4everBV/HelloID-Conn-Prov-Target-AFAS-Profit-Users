@@ -1,7 +1,6 @@
 #####################################################
 # HelloID-Conn-Prov-Target-AFAS-Profit-Users-Update
-#
-# Version: 3.0.0 | new-powershell-connector
+# PowerShell V2
 #####################################################
 
 # Set to false at start, at the end, only when no error occurs it is set to true
@@ -156,7 +155,7 @@ try {
         throw 'The account reference could not be found'
     }
 
-    if (($actionContext.Configuration.updateOnUpdate -eq $true) -or ($actionContext.AccountCorrelated -eq $true)) {
+    if (($actionContext.Configuration.onlyUpdateOnCorrelate -eq $false) -or ($actionContext.AccountCorrelated -eq $true)) {
         # Get current account and verify if there are changes
         try {
             Write-Verbose "Querying AFAS user where [$($correlationProperty)] = [$($correlationValue)]"
@@ -444,6 +443,7 @@ try {
     }
     else {
         $previousAccount = $account
+        Write-Verbose "The configuration parameter only update on correlate is [$($actionContext.Configuration.onlyUpdateOnCorrelate)]"
     }
 }
 catch {

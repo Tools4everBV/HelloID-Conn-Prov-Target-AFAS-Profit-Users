@@ -1,7 +1,6 @@
 #####################################################
 # HelloID-Conn-Prov-Target-AFAS-Profit-Users-Create
-#
-# Version: 3.0.0 | new-powershell-connector
+# PowerShell V2
 #####################################################
 
 # Set to false at start, at the end, only when no error occurs it is set to true
