@@ -271,7 +271,7 @@ try {
                     
             $outputContext.AuditLogs.Add([PSCustomObject]@{
                     Action  = "CreateAccount"
-                    Message = "Error creating AFAS user [$($account.UsId)]. Error Message: $($errorMessage.AuditErrorMessage). Account object: $($createAccount | ConvertTo-Json -Depth 10)"
+                    Message = "Error creating AFAS user [$($account.UsId)]. Error Message: $($errorMessage.AuditErrorMessage)."
                     IsError = $true
                 })
 

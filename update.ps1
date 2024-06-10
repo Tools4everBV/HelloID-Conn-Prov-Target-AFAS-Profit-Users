@@ -414,7 +414,7 @@ try {
                 
                     $outputContext.AuditLogs.Add([PSCustomObject]@{
                             Action  = "UpdateAccount"
-                            Message = "Error updating AFAS user [$($currentAccount.Gebruiker)]. Error Message: $($errorMessage.AuditErrorMessage). Old values: $($changedPropertiesObject.oldValues | ConvertTo-Json -Depth 10). New values: $($changedPropertiesObject.newValues | ConvertTo-Json -Depth 10)"
+                            Message = "Error updating AFAS user [$($currentAccount.Gebruiker)]. Error Message: $($errorMessage.AuditErrorMessage)."
                             IsError = $true
                         })
                     # Skip further actions, as this is a critical error
