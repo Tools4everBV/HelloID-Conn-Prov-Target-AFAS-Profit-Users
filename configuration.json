@@ -42,23 +42,23 @@
     }
   },
   {
-    "key": "createAccount",
+    "key": "createUser",
     "type": "checkbox",
     "defaultValue": false,
     "templateOptions": {
-      "label": "Create account when not found",
+      "label": "Create user when not found",
       "required": false,
-      "description": "When toggled, if the user account is not found, a new AFAS user account will be created in the create action (only in the create action)."
+      "description": "When toggled, if the user account is not found, a new the AFAS user account will be created in the create action (only in the create action)."
     }
   },
   {
-    "key": "updateOnCorrelate",
+    "key": "onlyUpdateOnCorrelate",
     "type": "checkbox",
     "defaultValue": false,
     "templateOptions": {
-      "label": "Update on correlate",
+      "label": "Only update on correlate",
       "required": false,
-      "description": "When toggled, if the mapped data differs from data in AFAS, the AFAS user will be updated in the create action (not just correlated)."
+      "description": "When toggled, the AFAS user will only be updated when the account is correlated"
     }
   },
   {
