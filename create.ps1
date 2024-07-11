@@ -140,7 +140,7 @@ try {
     }
     else {
         Write-Warning "Correlation is enabled but not configured correctly."
-        throw "Configuration of correlation is madatory."
+        throw "Configuration of correlation is mandatory."
     }
 
     # Get current account and verify if the action should be either [updated and correlated] or just [correlated]
