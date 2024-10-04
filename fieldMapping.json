@@ -3,7 +3,7 @@
   "MappingFields": [
     {
       "Name": "Acon",
-      "Description": "Connector",
+      "Description": "[Mandatory when creating user] Connector. NOTE: When not specifying this field in the mapping, the value will default to false.",
       "Type": "Text",
       "MappingActions": [
         {
@@ -19,7 +19,7 @@
     },
     {
       "Name": "Abac",
-      "Description": "Reservekopieen via commandline",
+      "Description": "[Mandatory when creating user] Reservekopieen via commandline Connector. NOTE: When not specifying this field in the mapping, the value will default to false.",
       "Type": "Text",
       "MappingActions": [
         {
@@ -35,7 +35,7 @@
     },
     {
       "Name": "Acom",
-      "Description": "Commandline",
+      "Description": "[Mandatory when creating user] Commandline. NOTE: When not specifying this field in the mapping, the value will default to false.",
       "Type": "Text",
       "MappingActions": [
         {
@@ -193,7 +193,7 @@
     },
     {
       "Name": "Site",
-      "Description": "[Mandatory] Outsite",
+      "Description": "[Mandatory] Outsite. NOTE: When not specifying this field in the mapping, the value will default to false.",
       "Type": "Text",
       "MappingActions": [
         {
@@ -236,7 +236,7 @@
     },
     {
       "Name": "InSi",
-      "Description": "[Mandatory] InSite",
+      "Description": "[Mandatory] InSite. NOTE: When not specifying this field in the mapping, the value will default to true. NOTE: When InSite is enabled, Pocket is enabled automatically as well.",
       "Type": "Text",
       "MappingActions": [
         {
@@ -262,7 +262,7 @@
     },
     {
       "Name": "Awin",
-      "Description": "[Mandatory] Profit Windows. Must be false to turn off InSite",
+      "Description": "[Mandatory] Profit Windows. NOTE: When not specifying this field in the mapping, the value will default to true. NOTE: When Profit Windows is enabled, InSite is enabled automatically as well. NOTE: When Profit Windows is enabled, Pocket is enabled automatically as well.",
       "Type": "Text",
       "MappingActions": [
         {
