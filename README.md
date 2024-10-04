@@ -49,6 +49,12 @@
 > [!IMPORTANT]
 > We never delete users in AFAS, we only clear the unique fields and block the users.
 
+> [!IMPORTANT]
+> **InSite** is a required field when creating a user. If this field is not mapped, the default value is `true`. Enabling InSite will automatically enable Pocket.
+
+> [!IMPORTANT]
+> **Profit Windows** is a required field when creating a user. If this field is not mapped, the default value is `true`. Enabling Profit Windows will automatically enable both InSite and Pocket.
+
 ## Introduction
 
 _HelloID-Conn-Prov-Target-AFAS-Profit-Users_ is a _target_ connector. _AFAS-Profit-Users_ provides a interface to communicate with Profit through a set of GetConnectors, which is component that allows the creation of custom views on the Profit data. GetConnectors are based on a pre-defined 'data collection', which is an existing view based on the data inside the Profit database. 
