@@ -5,25 +5,55 @@
 > This repository contains the connector and configuration code only. The implementer is responsible to acquire the connection details such as username, password, certificate, etc. You might even need to sign a contract or agreement with the supplier before implementing this connector. Please contact the client's application manager to coordinate the connector requirements.
 
 <p align="center">
-  <img src="https://www.tools4ever.nl/wp-content/uploads/2024/08/Logo.png>
+  <img src="https://github.com/Tools4everBV/HelloID-Conn-Prov-Target-AFAS-Profit-Users/blob/main/Logo.png?raw=true" alt="AFAS Logo">
 </p>
 
-## Table of contents
+## Table of Contents
 
 - [HelloID-Conn-Prov-Target-AFAS-Profit-Users](#helloid-conn-prov-target-afas-profit-users)
-  - [Table of contents](#table-of-contents)
+  - [Table of Contents](#table-of-contents)
+    - [Requirements](#requirements)
+    - [Remarks](#remarks)
   - [Introduction](#introduction)
   - [Getting started](#getting-started)
     - [Provisioning PowerShell V2 connector](#provisioning-powershell-v2-connector)
       - [Correlation configuration](#correlation-configuration)
       - [Field mapping](#field-mapping)
     - [Connection settings](#connection-settings)
-    - [Prerequisites](#prerequisites)
-    - [Remarks](#remarks)
       - [Scope](#scope)
   - [Setup the connector](#setup-the-connector)
   - [Getting help](#getting-help)
   - [HelloID docs](#helloid-docs)
+
+### Requirements
+
+- [ ] HelloID Provisioning agent (cloud or on-prem).
+- [ ] Loaded and available AFAS GetConnectors.
+- [ ] In addition to use to the above get-connector, the connector also uses the following build-in Profit update-connectors:
+*	KnUser
+- [ ] AFAS App Connector with access to the GetConnectors and associated views.
+  - [ ] Token for this AppConnector
+
+> [!TIP]
+> For this connector we have created a default set [Tools4ever - HelloID - T4E_HelloID_Users_v2.gcn], which can be imported directly into the AFAS Profit environment.
+
+> [!NOTE]
+> When the connector is defined as target system, only the following GetConnector is used by HelloID:
+> * 	Tools4ever - HelloID - T4E_HelloID_Users_v2
+
+### Remarks
+
+> [!IMPORTANT]
+> In view of GDPR, the persons private data, such as private email address and birthdate are not in the data collection by default. When needed for the implementation (e.g. set emailaddress with private email address on delete), these properties will have to be added.
+
+> [!IMPORTANT]
+> We never delete users in AFAS, we only clear the unique fields and block the users.
+
+> [!IMPORTANT]
+> **InSite** is a required field when creating a user. If this field is not mapped, the default value is `true`. Enabling InSite will automatically enable Pocket.
+
+> [!IMPORTANT]
+> **Profit Windows** is a required field when creating a user. If this field is not mapped, the default value is `true`. Enabling Profit Windows will automatically enable both InSite and Pocket.
 
 ## Introduction
 
@@ -102,30 +132,6 @@ The following settings are required to connect to the API.
 | Update User ID                | When toggled, the User ID will be updated if it doesn't match mapped naming convention. **Note that this is not advised as this can break certain links in AFAS. Use with care!** |           |
 | Toggle debug logging          | When toggled, extra logging is shown. Note that this is only meant for debugging, please switch this off when in production.                                                      |           |
 
-### Prerequisites
-
-- [ ] HelloID Provisioning agent (cloud or on-prem).
-- [ ] Loaded and available AFAS GetConnectors.
-- [ ] In addition to use to the above get-connector, the connector also uses the following build-in Profit update-connectors:
-*	KnUser
-- [ ] AFAS App Connector with access to the GetConnectors and associated views.
-  - [ ] Token for this AppConnector
-
-> [!TIP]
-> For this connector we have created a default set [Tools4ever - HelloID - T4E_HelloID_Users_v2.gcn], which can be imported directly into the AFAS Profit environment.
-
-> [!NOTE]
-> When the connector is defined as target system, only the following GetConnector is used by HelloID:
-> * 	Tools4ever - HelloID - T4E_HelloID_Users_v2
-
-### Remarks
-
-> [!IMPORTANT]
-> In view of GDPR, the persons private data, such as private email address and birthdate are not in the data collection by default. When needed for the implementation (e.g. set emailaddress with private email address on delete), these properties will have to be added.
-
-> [!IMPORTANT]
-> We never delete users in AFAS, we only clear the unique fields and block the users.
-
 #### Scope
 The data collection retrieved by the set of GetConnector's is sufficient for HelloID to provision persons.
 The data collection can be changed by the customer itself to meet their requirements.
@@ -134,8 +140,6 @@ The data collection can be changed by the customer itself to meet their requirem
 | ----------------------------------------------- | ------------------- | ------------------------- |
 | __Tools4ever - HelloID - T4E_HelloID_Users_v2__ | contract start date | <[Vandaag + 3 maanden]    |
 |                                                 | contract end date   | >[Vandaag - 3 maanden];[] |
-
-
 
 ## Setup the connector
 
