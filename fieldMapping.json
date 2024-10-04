@@ -220,7 +220,7 @@
     },
     {
       "Name": "InSi",
-      "Description": "[Required when creating user] InSite. NOTE: When not specifying this field in the mapping, the value will default to true. NOTE: When InSite is enabled, Pocket is enabled automatically as well.",
+      "Description": "[Required when creating user] InSite.\nIf this field is not mapped, the default value is true.\nEnabling InSite will automatically enable Pocket.",
       "Type": "Text",
       "MappingActions": [
         {
@@ -246,7 +246,7 @@
     },
     {
       "Name": "Awin",
-      "Description": "[Required when creating user] Profit Windows. NOTE: When not specifying this field in the mapping, the value will default to true. NOTE: When Profit Windows is enabled, InSite is enabled automatically as well. NOTE: When Profit Windows is enabled, Pocket is enabled automatically as well.",
+      "Description": "[Required when creating user] Profit Windows.\nIf this field is not mapped, the default value is true.\nEnabling Profit Windows will automatically enable InSite and Pocket.",
       "Type": "Text",
       "MappingActions": [
         {
