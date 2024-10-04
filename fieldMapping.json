@@ -3,7 +3,7 @@
   "MappingFields": [
     {
       "Name": "Acon",
-      "Description": "[Mandatory when creating user] Connector. NOTE: When not specifying this field in the mapping, the value will default to false.",
+      "Description": "[Mandatory when creating user] Connector.",
       "Type": "Text",
       "MappingActions": [
         {
@@ -19,7 +19,7 @@
     },
     {
       "Name": "Abac",
-      "Description": "[Mandatory when creating user] Reservekopieen via commandline Connector. NOTE: When not specifying this field in the mapping, the value will default to false.",
+      "Description": "[Mandatory when creating user] Reservekopieen via commandline Connector.",
       "Type": "Text",
       "MappingActions": [
         {
@@ -35,7 +35,7 @@
     },
     {
       "Name": "Acom",
-      "Description": "[Mandatory when creating user] Commandline. NOTE: When not specifying this field in the mapping, the value will default to false.",
+      "Description": "[Mandatory when creating user] Commandline.",
       "Type": "Text",
       "MappingActions": [
         {
@@ -177,7 +177,7 @@
     },
     {
       "Name": "Site",
-      "Description": "[Mandatory] Outsite. NOTE: When not specifying this field in the mapping, the value will default to false.",
+      "Description": "[Mandatory] Outsite.",
       "Type": "Text",
       "MappingActions": [
         {
