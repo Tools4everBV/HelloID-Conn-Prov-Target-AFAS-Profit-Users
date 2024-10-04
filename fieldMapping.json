@@ -3,7 +3,7 @@
   "MappingFields": [
     {
       "Name": "Acon",
-      "Description": "[Mandatory when creating user] Connector.",
+      "Description": "[Required when creating user] Connector.",
       "Type": "Text",
       "MappingActions": [
         {
@@ -19,7 +19,7 @@
     },
     {
       "Name": "Abac",
-      "Description": "[Mandatory when creating user] Reservekopieen via commandline Connector.",
+      "Description": "[Required when creating user] Reservekopieen via commandline Connector.",
       "Type": "Text",
       "MappingActions": [
         {
@@ -35,7 +35,7 @@
     },
     {
       "Name": "Acom",
-      "Description": "[Mandatory when creating user] Commandline.",
+      "Description": "[Required when creating user] Commandline.",
       "Type": "Text",
       "MappingActions": [
         {
@@ -100,7 +100,7 @@
     },
     {
       "Name": "Gebruiker",
-      "Description": "[Mandatory] This is the account refference. For export account data",
+      "Description": "[Required] This is the account refference. For export account data",
       "Type": "Text",
       "MappingActions": [
         {
@@ -117,7 +117,7 @@
     },
     {
       "Name": "Medewerker",
-      "Description": "[Mandatory] For Correlation",
+      "Description": "[Required] For Correlation",
       "Type": "Text",
       "MappingActions": [
         {
@@ -133,7 +133,7 @@
     },
     {
       "Name": "MtCd",
-      "Description": "[Mandatory] Mutatie code",
+      "Description": "[Required] Mutatie code",
       "Type": "Text",
       "MappingActions": [
         {
@@ -177,7 +177,7 @@
     },
     {
       "Name": "Site",
-      "Description": "[Mandatory] Outsite.",
+      "Description": "Outsite",
       "Type": "Text",
       "MappingActions": [
         {
@@ -203,7 +203,7 @@
     },
     {
       "Name": "Nm",
-      "Description": "[Mandatory] Omschrijving",
+      "Description": "[Required] Omschrijving",
       "Type": "Text",
       "MappingActions": [
         {
@@ -220,7 +220,7 @@
     },
     {
       "Name": "InSi",
-      "Description": "[Mandatory] InSite. NOTE: When not specifying this field in the mapping, the value will default to true. NOTE: When InSite is enabled, Pocket is enabled automatically as well.",
+      "Description": "[Required when creating user] InSite. NOTE: When not specifying this field in the mapping, the value will default to true. NOTE: When InSite is enabled, Pocket is enabled automatically as well.",
       "Type": "Text",
       "MappingActions": [
         {
@@ -246,7 +246,7 @@
     },
     {
       "Name": "Awin",
-      "Description": "[Mandatory] Profit Windows. NOTE: When not specifying this field in the mapping, the value will default to true. NOTE: When Profit Windows is enabled, InSite is enabled automatically as well. NOTE: When Profit Windows is enabled, Pocket is enabled automatically as well.",
+      "Description": "[Required when creating user] Profit Windows. NOTE: When not specifying this field in the mapping, the value will default to true. NOTE: When Profit Windows is enabled, InSite is enabled automatically as well. NOTE: When Profit Windows is enabled, Pocket is enabled automatically as well.",
       "Type": "Text",
       "MappingActions": [
         {
@@ -263,7 +263,7 @@
     },
     {
       "Name": "Upn",
-      "Description": "[Mandatory] userPrincipalName",
+      "Description": "UserPrincipalName",
       "Type": "Text",
       "MappingActions": [
         {
@@ -289,7 +289,7 @@
     },
     {
       "Name": "UsId",
-      "Description": "[Mandatory] Gebruiker code",
+      "Description": "[Required] Gebruiker code",
       "Type": "Text",
       "MappingActions": [
         {
@@ -306,7 +306,7 @@
     },
     {
       "Name": "EmAd",
-      "Description": "[Mandatory] E-mail",
+      "Description": "E-mail",
       "Type": "Text",
       "MappingActions": [
         {
