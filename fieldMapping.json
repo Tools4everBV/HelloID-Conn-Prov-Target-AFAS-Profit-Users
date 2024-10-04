@@ -176,22 +176,6 @@
       ]
     },
     {
-      "Name": "Pw",
-      "Description": "[Mandatory] dummy pwd, not used, but required",
-      "Type": "Text",
-      "MappingActions": [
-        {
-          "MapForActions": [
-            "Create"
-          ],
-          "MappingMode": "Fixed",
-          "Value": "\"GHJKL!!!23456gfdgf\"",
-          "UsedInNotifications": false,
-          "StoreInAccountData": false
-        }
-      ]
-    },
-    {
       "Name": "Site",
       "Description": "[Mandatory] Outsite. NOTE: When not specifying this field in the mapping, the value will default to false.",
       "Type": "Text",
