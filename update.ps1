@@ -425,18 +425,6 @@ try {
             }
             'NoChanges' {
                 Write-Verbose "No changes needed for AFAS user [$($currentAccount.Gebruiker)]"
-
-                if (-Not($actionContext.DryRun -eq $true)) {
-                    $outputContext.AuditLogs.Add([PSCustomObject]@{
-                            Action  = "UpdateAccount"
-                            Message = "No changes needed for AFAS user [$($currentAccount.Gebruiker)]"
-                            IsError = $false
-                        })
-                }
-                else {
-                    Write-Warning "DryRun: No changes needed for AFAS user [$($currentAccount.Gebruiker)]"
-                }
-
                 break
             }
         }
