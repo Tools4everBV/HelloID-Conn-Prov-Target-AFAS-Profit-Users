@@ -324,7 +324,7 @@
             "Delete"
           ],
           "MappingMode": "Complex",
-          "Value": "\"function getEmail() {\\r\\n    let domain = '@enjoy.com';\\r\\n    let email = 'unknown' + domain;\\r\\n\\r\\n    if(Person){\\r\\n        if (typeof Person.Contact.Personal.Email !== 'undefined' && Person.Contact.Personal.Email) {\\r\\n            email = Person.Contact.Personal.Email;\\r\\n        }\\r\\n        else if (typeof Person.ExternalId !== 'undefined' && Person.ExternalId) {\\r\\n            email = Person.ExternalId;\\r\\n            email = email + domain;\\r\\n        }\\r\\n    }\\r\\n    return email;\\r\\n}\\r\\n\\r\\ngetEmail();\"",
+          "Value": "\"function getEmail() {\\r\\n    return null;\\r\\n}\\r\\n\\r\\ngetEmail();\"",
           "UsedInNotifications": false,
           "StoreInAccountData": false
         }

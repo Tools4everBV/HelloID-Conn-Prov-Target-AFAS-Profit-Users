@@ -213,7 +213,7 @@ try {
                         '@UsId'  = $account.UsId
                         'Fields' = @{
                             # Nummer
-                            'BcCo' = $($outputcontext.data.Medewerker)
+                            'BcCo' = $currentAccount.Persoonsnummer
                         }
                     }
                 }
