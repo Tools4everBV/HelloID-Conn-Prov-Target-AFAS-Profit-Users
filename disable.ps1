@@ -163,7 +163,7 @@ try {
         $Headers.Add("IntegrationId", "45963_140664") # Fixed value - Tools4ever Partner Integration ID
 
         $splatWebRequest = @{
-            Uri             = "$($actionContext.Configuration.BaseUri)/connectors/$($actionContext.Configuration.GetConnector)?filterfieldids=$($correlationProperty)&filtervalues=$($correlationValue)&operatortypes=1"
+            Uri             = "$($actionContext.Configuration.BaseUri)/connectors/$($actionContext.Configuration.GetConnector)?filterfieldids=$($correlationProperty)&filtervalues=$([uri]::EscapeDataString($correlationValue))&operatortypes=1"
             Headers         = $headers
             Method          = 'GET'
             ContentType     = "application/json;charset=utf-8"
