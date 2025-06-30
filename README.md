@@ -16,6 +16,7 @@
     - [Remarks](#remarks)
   - [Introduction](#introduction)
   - [Getting started](#getting-started)
+    - [HelloID Icon URL](#helloid-icon-url)
     - [Provisioning PowerShell V2 connector](#provisioning-powershell-v2-connector)
       - [Correlation configuration](#correlation-configuration)
       - [Field mapping](#field-mapping)
@@ -87,6 +88,13 @@ Please see the following pages from the AFAS Knowledge Base for more information
 [Manage the APP connector](https://help.afas.nl/help/NL/SE/App_Apps_Custom_Maint.htm)
 
 [Manual add a token to the APP connector](https://help.afas.nl/help/NL/SE/App_Apps_Custom_Tokens_Manual.htm)
+
+### HelloID Icon URL
+URL of the icon used for the HelloID Provisioning target system.
+
+```
+https://raw.githubusercontent.com/Tools4everBV/HelloID-Conn-Prov-Target-AFAS-Profit-Users/refs/heads/main/Icon.png
+```
 
 ### Provisioning PowerShell V2 connector
 
