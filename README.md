@@ -26,6 +26,15 @@
   - [Getting help](#getting-help)
   - [HelloID docs](#helloid-docs)
 
+Supported features:
+| Feature                             | Supported | Actions                                                                     | Remarks |
+| ----------------------------------- | --------- | --------------------------------------------------------------------------- | ------- |
+| **Account Lifecycle**               | ✅         | Create, Update, Enable, Disable, Delete                                      |         |
+| **Permissions**                     | ❌         | -                                                                            |         |
+| **Resources**                       | ❌         | -                                                                           |         |
+| **Entitlement Import: Accounts**    | ✅         | -                                                                           |         |
+| **Entitlement Import: Permissions** | ❌         | -                                                                           |         |
+
 ### Requirements
 
 - [ ] HelloID Provisioning agent (cloud or on-prem).
