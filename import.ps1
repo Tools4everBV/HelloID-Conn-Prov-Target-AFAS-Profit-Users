@@ -13,7 +13,7 @@ function Get-AFASConnectorData {
         [parameter(Mandatory = $true)]$Connector,
         [parameter(Mandatory = $true)]$OrderByFieldIds,
         [parameter(Mandatory = $true)]$Filter,
-        [parameter(Mandatory = $true)][ref]$data
+        [parameter(Mandatory = $true)]$ImportFields
     )
 
     try {
@@ -26,30 +26,61 @@ function Get-AFASConnectorData {
         $take = 1000
         $skip = 0
 
-        $uri = $BaseUri + "/connectors/" + $Connector + "?$filter&skip=$skip&take=$take&orderbyfieldids=$OrderByFieldIds"
-       
-        $dataset = Invoke-RestMethod -Method Get -Uri $uri -Headers $Headers -UseBasicParsing
-        
-        foreach ($record in $dataset.rows) { [void]$data.Value.add($record) }
-
-        $skip += $take
-        while (@($dataset.rows).count -eq $take) {
-            $uri = $BaseUri + "/connectors/" + $Connector + "?$filter&skip=$skip&take=$take&orderbyfieldids=$OrderByFieldIds"
-
+        do {
+            $uri = $BaseUri + "/connectors/" + $Connector + "?$Filter&skip=$skip&take=$take&orderbyfieldids=$OrderByFieldIds"
             $dataset = Invoke-RestMethod -Method Get -Uri $uri -Headers $Headers -UseBasicParsing
 
-            $skip += $take
+            foreach ($importedAccount in $dataset.rows) {
+                $data = @{}
 
-            foreach ($record in $dataset.rows) { [void]$data.Value.add($record) }
-        }
-        Write-Verbose "Downloaded [$($data.Value.count)] records through get-connector [$connector]"
+                if ($null -ne $($importedAccount.Email_werk_gebruiker)) {
+                    $importedAccount | Add-Member -MemberType NoteProperty -Name "EmAd" -Value $($importedAccount.Email_werk_gebruiker) -Force
+                }
+                if ($null -ne $($importedAccount.Gebruiker)) {
+                    $importedAccount | Add-Member -MemberType NoteProperty -Name "UsId" -Value $($importedAccount.Gebruiker) -Force
+                }
+
+                if ($null -ne $($importedAccount.InSite)) {
+                    $importedAccount | Add-Member -MemberType NoteProperty -Name "Insi" -Value $($importedAccount.InSite) -Force
+                }
+
+                if ($null -ne $($importedAccount.OutSite)) {
+                    $importedAccount | Add-Member -MemberType NoteProperty -Name "Site" -Value $($importedAccount.OutSite) -Force
+                }
+
+                foreach ($field in $ImportFields) {
+                    $data[$field] = $importedAccount."$field"
+                }
+
+                # Also append Medewerker for correlating user
+                $data["Medewerker"] = $importedAccount.Medewerker
+
+                # Determine Enabled status
+                $Enabled = $false
+
+                if (($importedAccount.Geblokkeerd -eq $false) -and ($importedAccount.InSite -eq $true)) {
+                    $Enabled = $true
+                }
+
+                # Return the result
+                Write-Output @{
+                    AccountReference = $importedAccount.Gebruiker
+                    DisplayName      = $importedAccount.DisplayName
+                    UserName         = $importedAccount.Gebruiker
+                    Enabled          = $Enabled
+                    Data             = $data
+                }
+            }
+
+            $skip += $take
+        } while (@($dataset.rows).count -eq $take)
+
+        Write-Verbose "Downloaded records through get-connector [$connector]"
     }
     catch {
-        $data.Value = $null
-
         $ex = $PSItem
         $errorMessage = Get-ErrorMessage -ErrorObject $ex
-    
+
         Write-Verbose "Error at Line [$($ex.InvocationInfo.ScriptLineNumber)]: $($ex.InvocationInfo.Line). Error: $($errorMessage.VerboseErrorMessage)"
 
         throw "Error querying data from [$uri]. Error Message: $($errorMessage.AuditErrorMessage)"
@@ -151,53 +182,16 @@ function Get-ErrorMessage {
 
 try {
     Write-Information 'Starting AFAS Users account entitlement import'
-
-    #Query persons / accounts
-    $importedAccounts = [System.Collections.ArrayList]::new()
-    
+   
     #Filter - Determine what defines an account entitlement, copy from AFAS Connect cURL
     $Filter = "filterfieldids=Gebruiker&filtervalues=%5Bis%20niet%20leeg%5D&operatortypes=9"
 
-    Get-AFASConnectorData -Token $($actionContext.Configuration.Token) -BaseUri $($actionContext.Configuration.BaseUri) -Connector $($actionContext.Configuration.GetConnector) -OrderByFieldIds "Medewerker" ([ref]$importedAccounts) -Filter $Filter
+    Get-AFASConnectorData -Token $($actionContext.Configuration.Token) -BaseUri $($actionContext.Configuration.BaseUri) -Connector $($actionContext.Configuration.GetConnector) -OrderByFieldIds "Medewerker" -Filter $Filter -ImportFields $actionContext.ImportFields
 
-    foreach ($importedAccount in $importedAccounts) {
-        $data = @{}
-        
-        if($null -ne $($importedAccount.Email_werk_gebruiker)){
-            $importedAccount | Add-Member -MemberType NoteProperty -Name "EmAd" -Value $($importedAccount.Email_werk_gebruiker) -Force
-        }
-
-        if($null -ne $($importedAccount.Gebruiker)){
-            $importedAccount | Add-Member -MemberType NoteProperty -Name "UsId" -Value $($importedAccount.Gebruiker) -Force
-        }
-
-
-        foreach ($field in $actionContext.ImportFields) {
-            $data[$field] = $importedAccount."$field"
-        }
-
-        # Also append Medewerker for correlating user
-        $data["Medewerker"] = $importedAccount.Medewerker
-
-        # Determine Enabled status
-        $Enabled = $false
-
-        if( ($importedAccount.Geblokkeerd -eq $false) -and ($importedAccount.InSite -eq $true)){
-            $Enabled = $true
-        }
-
-        # Return the result
-        Write-Output @{
-            AccountReference = $importedAccount.Gebruiker
-            DisplayName      = $importedAccount.DisplayName
-            UserName         = $importedAccount.Gebruiker
-            Enabled          = $Enabled
-            Data             = $data
-        }
-    }
-    
     Write-Information 'AFAS Users account entitlement import completed'
-} catch {
+
+}
+catch {
     $ex = $PSItem
     $errorMessage = Get-ErrorMessage -ErrorObject $ex
 
