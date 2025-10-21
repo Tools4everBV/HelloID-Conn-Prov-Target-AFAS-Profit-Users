@@ -6,87 +6,6 @@
 # Enable TLS1.2
 [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor [System.Net.SecurityProtocolType]::Tls12
 
-function Get-AFASConnectorData {
-    param(
-        [parameter(Mandatory = $true)]$Token,
-        [parameter(Mandatory = $true)]$BaseUri,
-        [parameter(Mandatory = $true)]$Connector,
-        [parameter(Mandatory = $true)]$OrderByFieldIds,
-        [parameter(Mandatory = $true)]$Filter,
-        [parameter(Mandatory = $true)]$ImportFields
-    )
-
-    try {
-        Write-Verbose "Starting downloading objects through get-connector [$connector]"
-        $encodedToken = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($Token))
-        $authValue = "AfasToken $encodedToken"
-        $Headers = @{ Authorization = $authValue }
-        $Headers.Add("IntegrationId", "45963_140664") # Fixed value - Tools4ever Partner Integration ID
-
-        $take = 1000
-        $skip = 0
-
-        do {
-            $uri = $BaseUri + "/connectors/" + $Connector + "?$Filter&skip=$skip&take=$take&orderbyfieldids=$OrderByFieldIds"
-            $dataset = Invoke-RestMethod -Method Get -Uri $uri -Headers $Headers -UseBasicParsing
-
-            foreach ($importedAccount in $dataset.rows) {
-                $data = @{}
-
-                if ($null -ne $($importedAccount.Email_werk_gebruiker)) {
-                    $importedAccount | Add-Member -MemberType NoteProperty -Name "EmAd" -Value $($importedAccount.Email_werk_gebruiker) -Force
-                }
-                if ($null -ne $($importedAccount.Gebruiker)) {
-                    $importedAccount | Add-Member -MemberType NoteProperty -Name "UsId" -Value $($importedAccount.Gebruiker) -Force
-                }
-
-                if ($null -ne $($importedAccount.InSite)) {
-                    $importedAccount | Add-Member -MemberType NoteProperty -Name "Insi" -Value $($importedAccount.InSite) -Force
-                }
-
-                if ($null -ne $($importedAccount.OutSite)) {
-                    $importedAccount | Add-Member -MemberType NoteProperty -Name "Site" -Value $($importedAccount.OutSite) -Force
-                }
-
-                foreach ($field in $ImportFields) {
-                    $data[$field] = $importedAccount."$field"
-                }
-
-                # Also append Medewerker for correlating user
-                $data["Medewerker"] = $importedAccount.Medewerker
-
-                # Determine Enabled status
-                $Enabled = $false
-
-                if (($importedAccount.Geblokkeerd -eq $false) -and ($importedAccount.InSite -eq $true)) {
-                    $Enabled = $true
-                }
-
-                # Return the result
-                Write-Output @{
-                    AccountReference = $importedAccount.Gebruiker
-                    DisplayName      = $importedAccount.DisplayName
-                    UserName         = $importedAccount.Gebruiker
-                    Enabled          = $Enabled
-                    Data             = $data
-                }
-            }
-
-            $skip += $take
-        } while (@($dataset.rows).count -eq $take)
-
-        Write-Verbose "Downloaded records through get-connector [$connector]"
-    }
-    catch {
-        $ex = $PSItem
-        $errorMessage = Get-ErrorMessage -ErrorObject $ex
-
-        Write-Verbose "Error at Line [$($ex.InvocationInfo.ScriptLineNumber)]: $($ex.InvocationInfo.Line). Error: $($errorMessage.VerboseErrorMessage)"
-
-        throw "Error querying data from [$uri]. Error Message: $($errorMessage.AuditErrorMessage)"
-    }
-}
-
 function Resolve-HTTPError {
     [CmdletBinding()]
     param (
@@ -186,10 +105,68 @@ try {
     #Filter - Determine what defines an account entitlement, copy from AFAS Connect cURL
     $Filter = "filterfieldids=Gebruiker&filtervalues=%5Bis%20niet%20leeg%5D&operatortypes=9"
 
-    Get-AFASConnectorData -Token $($actionContext.Configuration.Token) -BaseUri $($actionContext.Configuration.BaseUri) -Connector $($actionContext.Configuration.GetConnector) -OrderByFieldIds "Medewerker" -Filter $Filter -ImportFields $actionContext.ImportFields
+    Write-Verbose "Starting downloading objects through get-connector [$($actionContext.Configuration.GetConnector)]"
+    $encodedToken = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($($actionContext.Configuration.Token)))
+    $authValue = "AfasToken $encodedToken"
+    $Headers = @{ Authorization = $authValue }
+    $Headers.Add("IntegrationId", "45963_140664") # Fixed value - Tools4ever Partner Integration ID
 
+    $take = 1000
+    $skip = 0
+
+    do {
+        $uri = $($actionContext.Configuration.BaseUri) + "/connectors/" + $($actionContext.Configuration.GetConnector) + "?$Filter&skip=$skip&take=$take&orderbyfieldids=Medewerker"
+        $dataset = Invoke-RestMethod -Method Get -Uri $uri -Headers $Headers -UseBasicParsing
+
+        foreach ($importedAccount in $dataset.rows) {
+            $data = @{}
+
+            if ($null -ne $($importedAccount.Email_werk_gebruiker)) {
+                $importedAccount | Add-Member -MemberType NoteProperty -Name "EmAd" -Value $($importedAccount.Email_werk_gebruiker) -Force
+            }
+
+            if ($null -ne $($importedAccount.Gebruiker)) {
+                $importedAccount | Add-Member -MemberType NoteProperty -Name "UsId" -Value $($importedAccount.Gebruiker) -Force
+            }
+
+            if ($null -ne $($importedAccount.InSite)) {
+                $importedAccount | Add-Member -MemberType NoteProperty -Name "Insi" -Value $($importedAccount.InSite) -Force
+            }
+
+            if ($null -ne $($importedAccount.OutSite)) {
+                $importedAccount | Add-Member -MemberType NoteProperty -Name "Site" -Value $($importedAccount.OutSite) -Force
+            }
+
+            foreach ($field in $($actionContext.ImportFields)) {
+                $data[$field] = $importedAccount."$field"
+            }
+
+            # Also append Medewerker for correlating user
+            $data["Medewerker"] = $importedAccount.Medewerker
+
+            # Determine Enabled status
+            $Enabled = $false
+
+            if (($importedAccount.Geblokkeerd -eq $false) -and ($importedAccount.InSite -eq $true)) {
+                $Enabled = $true
+            }
+
+            # Return the result
+            Write-Output @{
+                AccountReference = $importedAccount.Gebruiker
+                DisplayName      = $importedAccount.DisplayName
+                UserName         = $importedAccount.Gebruiker
+                Enabled          = $Enabled
+                Data             = $data
+            }
+        }
+
+        $skip += $take
+    } while (@($dataset.rows).count -eq $take)
+
+    Write-Verbose "Downloaded records through get-connector [$($actionContext.Configuration.GetConnector)]"
+    
     Write-Information 'AFAS Users account entitlement import completed'
-
 }
 catch {
     $ex = $PSItem
