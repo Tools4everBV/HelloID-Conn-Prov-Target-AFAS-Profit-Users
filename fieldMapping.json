@@ -2,110 +2,12 @@
   "Version": "v1",
   "MappingFields": [
     {
-      "Name": "Acon",
-      "Description": "[Required when creating user] Connector.",
+      "Name": "Persoonsnummer",
+      "Description": "[Required] Account reference",
       "Type": "Text",
       "MappingActions": [
         {
           "MapForActions": [
-            "Create"
-          ],
-          "MappingMode": "Fixed",
-          "Value": "\"false\"",
-          "UsedInNotifications": false,
-          "StoreInAccountData": false
-        }
-      ]
-    },
-    {
-      "Name": "Abac",
-      "Description": "[Required when creating user] Reservekopieen via commandline Connector.",
-      "Type": "Text",
-      "MappingActions": [
-        {
-          "MapForActions": [
-            "Create"
-          ],
-          "MappingMode": "Fixed",
-          "Value": "\"false\"",
-          "UsedInNotifications": false,
-          "StoreInAccountData": false
-        }
-      ]
-    },
-    {
-      "Name": "Acom",
-      "Description": "[Required when creating user] Commandline.",
-      "Type": "Text",
-      "MappingActions": [
-        {
-          "MapForActions": [
-            "Create"
-          ],
-          "MappingMode": "Fixed",
-          "Value": "\"false\"",
-          "UsedInNotifications": false,
-          "StoreInAccountData": false
-        }
-      ]
-    },
-    {
-      "Name": "OcUs",
-      "Description": "Meewerklicentie actieveren",
-      "Type": "Text",
-      "MappingActions": [
-        {
-          "MapForActions": [
-            "Create"
-          ],
-          "MappingMode": "Fixed",
-          "Value": "\"false\"",
-          "UsedInNotifications": false,
-          "StoreInAccountData": false
-        }
-      ]
-    },
-    {
-      "Name": "PoMa",
-      "Description": "AFAS Online Portal-beheerder",
-      "Type": "Text",
-      "MappingActions": [
-        {
-          "MapForActions": [
-            "Create"
-          ],
-          "MappingMode": "Fixed",
-          "Value": "\"false\"",
-          "UsedInNotifications": false,
-          "StoreInAccountData": false
-        }
-      ]
-    },
-    {
-      "Name": "AcUs",
-      "Description": "AFAS Accept",
-      "Type": "Text",
-      "MappingActions": [
-        {
-          "MapForActions": [
-            "Create",
-            "Update"
-          ],
-          "MappingMode": "Fixed",
-          "Value": "\"false\"",
-          "UsedInNotifications": false,
-          "StoreInAccountData": false
-        }
-      ]
-    },
-    {
-      "Name": "Gebruiker",
-      "Description": "[Required] This is the account refference. For export account data",
-      "Type": "Text",
-      "MappingActions": [
-        {
-          "MapForActions": [
-            "Create",
             "Update"
           ],
           "MappingMode": "None",
@@ -117,7 +19,7 @@
     },
     {
       "Name": "Medewerker",
-      "Description": "[Required] For Correlation",
+      "Description": "[Required] Correlation value",
       "Type": "Text",
       "MappingActions": [
         {
@@ -132,143 +34,12 @@
       ]
     },
     {
-      "Name": "MtCd",
-      "Description": "[Required] Mutatie code",
-      "Type": "Text",
-      "MappingActions": [
-        {
-          "MapForActions": [
-            "Create",
-            "Update"
-          ],
-          "MappingMode": "Fixed",
-          "Value": "\"1\"",
-          "UsedInNotifications": false,
-          "StoreInAccountData": false
-        },
-        {
-          "MapForActions": [
-            "Enable"
-          ],
-          "MappingMode": "Fixed",
-          "Value": "\"6\"",
-          "UsedInNotifications": false,
-          "StoreInAccountData": false
-        },
-        {
-          "MapForActions": [
-            "Disable"
-          ],
-          "MappingMode": "Fixed",
-          "Value": "\"2\"",
-          "UsedInNotifications": false,
-          "StoreInAccountData": false
-        },
-        {
-          "MapForActions": [
-            "Delete"
-          ],
-          "MappingMode": "Fixed",
-          "Value": "\"0\"",
-          "UsedInNotifications": false,
-          "StoreInAccountData": false
-        }
-      ]
-    },
-    {
-      "Name": "Site",
-      "Description": "Outsite",
-      "Type": "Text",
-      "MappingActions": [
-        {
-          "MapForActions": [
-            "Create",
-            "Update"
-          ],
-          "MappingMode": "Fixed",
-          "Value": "\"false\"",
-          "UsedInNotifications": false,
-          "StoreInAccountData": false
-        },
-        {
-          "MapForActions": [
-            "Delete"
-          ],
-          "MappingMode": "Fixed",
-          "Value": "\"true\"",
-          "UsedInNotifications": false,
-          "StoreInAccountData": false
-        }
-      ]
-    },
-    {
-      "Name": "Nm",
-      "Description": "[Required] Omschrijving",
-      "Type": "Text",
-      "MappingActions": [
-        {
-          "MapForActions": [
-            "Create",
-            "Update"
-          ],
-          "MappingMode": "Field",
-          "Value": "\"Person.DisplayName\"",
-          "UsedInNotifications": false,
-          "StoreInAccountData": false
-        }
-      ]
-    },
-    {
-      "Name": "InSi",
-      "Description": "[Required when creating user] InSite.\nIf this field is not mapped, the default value is true.\nEnabling InSite will automatically enable Pocket.",
-      "Type": "Text",
-      "MappingActions": [
-        {
-          "MapForActions": [
-            "Create",
-            "Update"
-          ],
-          "MappingMode": "Fixed",
-          "Value": "\"true\"",
-          "UsedInNotifications": false,
-          "StoreInAccountData": false
-        },
-        {
-          "MapForActions": [
-            "Delete"
-          ],
-          "MappingMode": "Fixed",
-          "Value": "\"false\"",
-          "UsedInNotifications": false,
-          "StoreInAccountData": false
-        }
-      ]
-    },
-    {
-      "Name": "Awin",
-      "Description": "[Required when creating user] Profit Windows.\nIf this field is not mapped, the default value is true.\nEnabling Profit Windows will automatically enable InSite and Pocket.",
-      "Type": "Text",
-      "MappingActions": [
-        {
-          "MapForActions": [
-            "Create",
-            "Delete"
-          ],
-          "MappingMode": "Fixed",
-          "Value": "\"false\"",
-          "UsedInNotifications": false,
-          "StoreInAccountData": false
-        }
-      ]
-    },
-    {
       "Name": "Upn",
       "Description": "UserPrincipalName",
       "Type": "Text",
       "MappingActions": [
         {
           "MapForActions": [
-            "Create",
             "Update"
           ],
           "MappingMode": "Complex",
@@ -289,18 +60,17 @@
     },
     {
       "Name": "UsId",
-      "Description": "[Required] Gebruiker code",
+      "Description": "AFAS user code, only used when update toggle is enabled in connector configuration.",
       "Type": "Text",
       "MappingActions": [
         {
           "MapForActions": [
-            "Create",
             "Update"
           ],
           "MappingMode": "Complex",
           "Value": "\"function getUsId() {\\n    let UsId = '<CustomerCode>' + '.' + Person.ExternalId;\\n    return UsId;\\n}\\n\\ngetUsId();\"",
           "UsedInNotifications": false,
-          "StoreInAccountData": true
+          "StoreInAccountData": false
         }
       ]
     },
@@ -311,7 +81,6 @@
       "MappingActions": [
         {
           "MapForActions": [
-            "Create",
             "Update"
           ],
           "MappingMode": "Complex",

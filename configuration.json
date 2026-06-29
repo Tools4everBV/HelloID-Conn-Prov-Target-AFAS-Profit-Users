@@ -6,6 +6,7 @@
     "templateOptions": {
       "label": "Base Uri",
       "placeholder": "https://12345.rest.afas.online/profitrestservices",
+      "description": "Base URL of the AFAS Profit REST services endpoint.",
       "required": true
     }
   },
@@ -17,17 +18,18 @@
       "label": "Token in XML format",
       "type": "password",
       "placeholder": "<token><version>1</version><data>D5R324DD5F4TRD945E530ED3CDD70D94BBDEC4C732B43F285ECB12345678</data></token>",
-      "description": "",
+      "description": "AFAS token in XML format as generated in the AFAS environment.",
       "required": true
     }
   },
   {
     "key": "GetConnector",
     "type": "input",
-    "defaultValue": "T4E_HelloID_Users_v2",
+    "defaultValue": "T4E_HelloID_Target_Users",
     "templateOptions": {
       "label": "GetConnector",
-      "placeholder": "T4E_HelloID_Users_v2",
+      "placeholder": "T4E_HelloID_Target_Users",
+      "description": "Name of the AFAS GetConnector.",
       "required": true
     }
   },
@@ -38,47 +40,66 @@
     "templateOptions": {
       "label": "UpdateConnector",
       "placeholder": "KnUser",
+      "description": "Name of the AFAS UpdateConnector used for account mutations.",
       "required": true
     }
   },
   {
-    "key": "createUser",
-    "type": "checkbox",
-    "defaultValue": false,
-    "templateOptions": {
-      "label": "Create user when not found",
-      "required": false,
-      "description": "When toggled, if the user account is not found, a new the AFAS user account will be created in the create action (only in the create action)."
-    }
-  },
-  {
-    "key": "onlyUpdateOnCorrelate",
-    "type": "checkbox",
-    "defaultValue": false,
-    "templateOptions": {
-      "label": "Only update on correlate",
-      "required": false,
-      "description": "When toggled, the AFAS user will only be updated when the account is correlated"
-    }
-  },
-  {
-    "key": "updateUserId",
+    "key": "UpdateUserId",
     "type": "checkbox",
     "defaultValue": false,
     "templateOptions": {
       "label": "Update User ID",
       "required": false,
-      "description": "When toggled, the User ID will be updated if it doesn't match mapped naming convention. Use with care! This can break certain links in AFAS. Please consult AFAS first."
+      "description": "When enabled, the AFAS User ID is updated when it differs from the mapped value. Use with care, because changing User ID can affect existing AFAS links and dependencies. Please consult AFAS first. URL: "
     }
   },
   {
-    "key": "isDebug",
-    "type": "checkbox",
-    "defaultValue": false,
+    "key": "EnableOutSiteMode",
+    "type": "select",
+    "defaultValue": "disableOutSite",
     "templateOptions": {
-      "label": "Toggle debug logging",
-      "description": "When toggled, debug logging will be displayed",
-      "required": false
+      "label": "Behavior on enable",
+      "description": "Choose how OutSite is handled during enable.",
+      "options": [
+        {
+          "label": "Set OutSite to disabled",
+          "value": "disableOutSite"
+        },
+        {
+          "label": "Do not alter OutSite",
+          "value": "ignoreOutSite"
+        },
+        {
+        "label": "Set OutSite to enabled",
+          "value": "enableOutSite"
+        }
+      ],
+      "required": true
+    }
+  },
+  {
+    "key": "DisableDeleteMode",
+    "type": "select",
+    "defaultValue": "enableOutSiteNoBlock",
+    "templateOptions": {
+      "label": "Behavior on disable and delete",
+      "description": "Choose how block status, group memberships, and OutSite are handled during disable and delete.",
+      "options": [
+        {
+          "label": "OutSite enabled, no block",
+          "value": "enableOutSiteNoBlock"
+        },
+        {
+          "label": "Block user and keep groups, OutSite disabled",
+          "value": "blockKeepGroupsDisableOutSite"
+        },
+        {
+          "label": "Block user and remove groups, OutSite disabled",
+          "value": "blockRemoveGroupsDisableOutSite"
+        }
+      ],
+      "required": true
     }
   }
 ]

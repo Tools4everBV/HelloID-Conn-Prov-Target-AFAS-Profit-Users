@@ -1,7 +1,7 @@
-#################################################
-# HelloID-Conn-Prov-Target-AFAS-Profit-Users-Enable
+################################################################
+# HelloID-Conn-Prov-Target-AFAS-Profit-Users-GrantPermission
 # PowerShell V2
-#################################################
+################################################################
 
 #TODO: Remove hardcoded values
 $actionContext.References.Account = "1000525"
@@ -54,6 +54,7 @@ function Resolve-AFAS-ProfitError {
 }
 #endregion
 
+# Begin
 try {
     # Verify if [accountReference] has a value
     if ([string]::IsNullOrEmpty($($actionContext.References.Account))) {
@@ -79,34 +80,11 @@ try {
     $correlatedAccount = (Invoke-RestMethod @splatQueryParams).rows[0]
 
     if ($null -ne $correlatedAccount) {
-        $lifecycleProcess = 'EnableAccount'
-
         if ([string]::IsNullOrWhiteSpace([string]$correlatedAccount.UsId)) {
             throw 'Correlated AFAS user is missing required identifier [Gebruiker/UsId]. Verify the AFAS GetConnector output.'
         }
 
-        $enableOutSiteMode = [string]$actionContext.Configuration.EnableOutSiteMode
-
-        # Lifecycle actions are evaluated first and merged into one API-call.
-        $lifecycleActions = @('UnblockUser', 'EnableInsite')
-
-        switch ($enableOutSiteMode) {
-            'ignoreOutSite' {
-                break
-            }
-            'disableOutSite' {
-                $lifecycleActions += 'DisableOutsite'
-                break
-            }
-            'enableOutSite' {
-                $lifecycleActions += 'EnableOutsite'
-                break
-            }
-            default {
-                throw "Unsupported EnableOutSiteMode value [$enableOutSiteMode]"
-            }
-        }
-
+        $lifecycleProcess = 'GrantPermission'
     }
     else {
         $lifecycleProcess = 'NotFound'
@@ -114,33 +92,15 @@ try {
 
     # Process
     switch ($lifecycleProcess) {
-        'EnableAccount' {
+        'GrantPermission' {
+            $permissionReference = [string]$actionContext.References.Permission.Reference
+
             # Mandatory fields
             $fieldsToUpdate = [ordered]@{
-                Nm = [string]$correlatedAccount.Nm
+                Nm   = [string]$correlatedAccount.Nm
                 MtCd = 1 # Import without changing the block status
             }
-
-            foreach ($lifecycleAction in $lifecycleActions) {
-                switch ($lifecycleAction) {
-                    'EnableInsite' {
-                        $fieldsToUpdate['InSi'] = 'true'
-                        continue
-                    }
-                    'EnableOutsite' {
-                        $fieldsToUpdate['Site'] = 'true'
-                        continue
-                    }
-                    'DisableOutsite' {
-                        $fieldsToUpdate['Site'] = 'false'
-                        continue
-                    }
-                    'UnblockUser' {
-                        $fieldsToUpdate['MtCd'] = 6 # Unblock user
-                        continue
-                    }
-                }
-            }
+            $fieldsToUpdate[$permissionReference] = 'true'
 
             $updateAccount = [PSCustomObject]@{
                 KnUser = @{
@@ -163,13 +123,14 @@ try {
             }
 
             if (-not($actionContext.DryRun -eq $true)) {
-                Write-Information "Enabling AFAS Profit account with accountReference: [$($actionContext.References.Account)]"
+                Write-Information "Granting AFAS Profit permission: [$($actionContext.PermissionDisplayName)] - [$permissionReference]"
                 $null = Invoke-RestMethod @splatUpdateParams -Verbose:$false
-                $auditLogMessage = "Enabled AFAS Profit account with accountReference: [$($actionContext.References.Account)] using actions [$($lifecycleActions -join ', ')]"
+
+                $auditLogMessage = "Granted permission [$($actionContext.PermissionDisplayName)]."
             }
             else {
-                Write-Information "[DryRun] Enable AFAS Profit account with accountReference: [$($actionContext.References.Account)], will be executed during enforcement using actions [$($lifecycleActions -join ', ')]"
-                $auditLogMessage = "[DryRun] Would enable AFAS Profit account with accountReference: [$($actionContext.References.Account)] using actions [$($lifecycleActions -join ', ')]"
+                Write-Information "[DryRun] Grant AFAS Profit permission: [$($actionContext.PermissionDisplayName)] - [$permissionReference], will be executed during enforcement"
+                $auditLogMessage = "[DryRun] Would grant permission [$($actionContext.PermissionDisplayName)]."
             }
 
             $outputContext.Success = $true
@@ -190,23 +151,20 @@ try {
             break
         }
     }
-    
 }
 catch {
     $outputContext.Success = $false
     $ex = $PSItem
-
     if ($($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or
         $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
         $errorObj = Resolve-AFAS-ProfitError -ErrorObject $ex
-        $auditLogMessage = "Could not enable AFAS-Profit account: [$($actionContext.References.Account)]. Error: $($errorObj.FriendlyMessage)"
+        $auditLogMessage = "Could not grant AFAS Profit permission for account: [$($actionContext.References.Account)]. Error: $($errorObj.FriendlyMessage)"
         Write-Warning "Error at Line '$($errorObj.ScriptLineNumber)': $($errorObj.Line). Error: $($errorObj.ErrorDetails)"
     }
     else {
-        $auditLogMessage = "Could not enable AFAS-Profit account: [$($actionContext.References.Account)]. Error: $($ex.Exception.Message)"
+        $auditLogMessage = "Could not grant AFAS Profit permission for account: [$($actionContext.References.Account)]. Error: $($_.Exception.Message)"
         Write-Warning "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($ex.Exception.Message)"
     }
-
     $outputContext.AuditLogs.Add([PSCustomObject]@{
             Message = $auditLogMessage
             IsError = $true
