@@ -172,7 +172,7 @@ try {
 
             # Return the result
             Write-Output @{
-                AccountReference = $importedAccount.Gebruiker
+                AccountReference = [PSCustomObject]@{ Gebruiker = $importedAccount.Gebruiker }
                 DisplayName      = $importedAccount.DisplayName
                 UserName         = $importedAccount.Gebruiker
                 Enabled          = $Enabled
