@@ -89,7 +89,7 @@ try {
             # Return the result
             Write-Output @{
                 AccountReference = $importedAccount.Persoonsnummer
-                DisplayName      = $displayName
+                DisplayName      = $displayName.substring(0, [System.Math]::Min(100, $displayName.Length))
                 UserName         = $importedAccount.UsId
                 Enabled          = $enabled
                 Data             = $data

@@ -77,9 +77,9 @@ try {
         ErrorAction     = 'Stop'
     }
 
-    $correlatedAccount = (Invoke-RestMethod @splatQueryParams).rows[0]
+    $correlatedAccount = (Invoke-RestMethod @splatQueryParams).rows
 
-    if ($null -ne $correlatedAccount) {
+    if (($correlatedAccount | Measure-Object).Count -eq 1) {
         if ([string]::IsNullOrWhiteSpace([string]$correlatedAccount.UsId)) {
             throw 'Correlated AFAS user is missing required identifier [Gebruiker/UsId]. Verify the AFAS GetConnector output.'
         }

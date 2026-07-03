@@ -6,6 +6,7 @@
 #TODO: Remove hardcoded values
 $actionContext.References.Account = "1000525"
 $actionContext.Configuration.UpdateUserId = $true
+$actionContext.AccountCorrelated = $true
 # $actionContext.DryRun = $false
 
 # Enable TLS1.2
@@ -125,13 +126,13 @@ try {
         ErrorAction     = 'Stop'
     }
 
-    $correlatedAccount = (Invoke-RestMethod @splatQueryParams).rows[0]
+    $correlatedAccount = (Invoke-RestMethod @splatQueryParams).rows
     
     $lifecycleActionList = @()
-    # $newUsId = $null
-    # $currentUsId = $null
-    # $accountPropertiesChanged = @()
-    if ($null -ne $correlatedAccount) {
+    $newUsId = $null
+    $currentUsId = $null
+    $accountPropertiesChanged = @()
+    if (($correlatedAccount | Measure-Object).Count -eq 1) {
         $currentUsId = [string]$correlatedAccount.UsId
 
         $outputContext.PreviousData = $correlatedAccount | Select-Object -Property $outputContext.Data.PSObject.Properties.Name
@@ -149,13 +150,11 @@ try {
         }
         $propertiesChanged = @(Compare-Object @splatCompareProperties -PassThru | Where-Object { $_.SideIndicator -eq '=>' })
 
-
-
         $usIdChange = @($propertiesChanged | Where-Object { $_.Name -eq 'UsId' })
         $accountPropertiesChanged = @($propertiesChanged | Where-Object { $_.Name -ne 'UsId' })
 
         # Depending on connector configuration, allow changes of the User ID (UsId).
-        if ($actionContext.Configuration.UpdateUserId -and $usIdChange.Count -gt 0) {
+        if ($actionContext.Configuration.UpdateUserId -and $usIdChange.Count -gt 0 -and $actionContext.AccountCorrelated) {
             $newUsId = [string]($usIdChange | Select-Object -First 1 -ExpandProperty Value)
             $lifecycleActionList += @('UpdateUserId')
         }
@@ -192,18 +191,18 @@ try {
                     Invoke-AFASUserUpdate -CurrentUsId $currentUsId -Name $correlatedAccount.Nm -FieldsToUpdate $fieldsToUpdate -AccountReference $actionContext.References.Account
                 }
                 else {
-                    Write-Information "[DryRun] Update AFAS Profit account with accountReference: [$($actionContext.References.Account)], will be executed during enforcement"
+                    Write-Information "[DryRun] Update AFAS Profit account UsId with accountReference: [$($actionContext.References.Account)], will be executed during enforcement"
                 }
-
-                # If UsId was changed, next actions in this run must target the new UsId.
-                $currentUsId = $newUsId
 
                 $outputContext.Success = $true
                 $outputContext.AuditLogs.Add([PSCustomObject]@{
-                        Message = "Update account was successful, Account property(s) updated: [UsId]"
-                        IsError = $false
-                    })
+                    Message = "Update account was successful, Account [UsId: $($currentUsId)] updated to [UsId: $($newUsId)]"
+                    IsError = $false
+                })
                 break
+
+                # If UsId was changed, next actions in this run must target the new UsId.
+                $currentUsId = $newUsId
             }
 
             'UpdateAccount' {

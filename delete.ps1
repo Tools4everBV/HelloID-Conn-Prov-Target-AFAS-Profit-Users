@@ -76,9 +76,9 @@ try {
         ErrorAction     = 'Stop'
     }
 
-    $correlatedAccount = (Invoke-RestMethod @splatQueryParams).rows[0]
+    $correlatedAccount = (Invoke-RestMethod @splatQueryParams).rows
 
-    if ($null -ne $correlatedAccount) {
+    if (($correlatedAccount | Measure-Object).Count -eq 1) {
         $lifecycleProcess = 'DeleteAccount'
 
         $outputContext.PreviousData = $correlatedAccount | Select-Object -Property $outputContext.Data.PSObject.Properties.Name
@@ -117,26 +117,6 @@ try {
                 $lifecycleActions = @('UpdateAccount') + $lifecycleActions
             }
         }
-
-        switch ($disableDeleteMode) {
-            'blockKeepGroupsDisableOutSite' {
-                $lifecycleActions += 'DisableOutsite'
-                $lifecycleActions += 'BlockUserKeepGroups'
-                break
-            }
-            'blockRemoveGroupsDisableOutSite' {
-                $lifecycleActions += 'DisableOutsite'
-                $lifecycleActions += 'BlockUserRemoveGroups'
-                break
-            }
-            'enableOutSiteNoBlock' {
-                $lifecycleActions += 'EnableOutsite'
-                break
-            }
-            default {
-                throw "Unsupported DisableDeleteMode value [$disableDeleteMode]"
-            }
-        }
     }
     else {
         $lifecycleProcess = 'NotFound'
@@ -161,36 +141,30 @@ try {
                 else {
                     throw 'Reconciliation is not supported for Delete action where OutSite needs to stay enabled. Please reconcile the account manually in AFAS Profit.'
                 }
-            }
+            } #TODO: Repurpose configuration.json options for reconciliation only since there is no fieldmapping. For the non-reconciliation scenario, the fieldmapping is used to determine which fields are updated. If Outsite stays enabled, then Upn and EmAd can become "accountReference@domain.com"
 
-            foreach ($lifecycleAction in $lifecycleActions) {
-                switch ($lifecycleAction) {
-                    'UpdateAccount' {
-                        foreach ($property in $propertiesChanged) {
-                            $fieldsToUpdate[$property.Name] = $property.Value
-                        }
-                        continue
-                    }
-                    'DisableInsite' {
-                        $fieldsToUpdate['InSi'] = 'false'
-                        continue
-                    }
-                    'EnableOutsite' {
-                        $fieldsToUpdate['Site'] = 'true'
-                        continue
-                    }
-                    'DisableOutsite' {
-                        $fieldsToUpdate['Site'] = 'false'
-                        continue
-                    }
-                    'BlockUserKeepGroups' {
-                        $fieldsToUpdate['MtCd'] = 2
-                        continue
-                    }
-                    'BlockUserRemoveGroups' {
-                        $fieldsToUpdate['MtCd'] = 0
-                        continue
-                    }
+            switch ($disableDeleteMode) {
+                'blockKeepGroupsDisableOutSite' {
+                    $lifecycleActions += 'DisableOutsite'
+                    $lifecycleActions += 'BlockUserKeepGroups'
+                    $fieldsToUpdate['Site'] = 'false'
+                    $fieldsToUpdate['MtCd'] = 2
+                    break
+                }
+                'blockRemoveGroupsDisableOutSite' {
+                    $lifecycleActions += 'DisableOutsite'
+                    $lifecycleActions += 'BlockUserRemoveGroups'
+                    $fieldsToUpdate['Site'] = 'false'
+                    $fieldsToUpdate['MtCd'] = 0
+                    break
+                }
+                'enableOutSiteNoBlock' {
+                    $lifecycleActions += 'EnableOutsite'
+                    $fieldsToUpdate['Site'] = 'true'
+                    break
+                }
+                default {
+                    throw "Unsupported DisableDeleteMode value [$disableDeleteMode]"
                 }
             }
 

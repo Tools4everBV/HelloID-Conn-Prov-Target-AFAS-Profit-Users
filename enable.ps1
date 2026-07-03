@@ -76,37 +76,14 @@ try {
         ErrorAction     = 'Stop'
     }
 
-    $correlatedAccount = (Invoke-RestMethod @splatQueryParams).rows[0]
+    $correlatedAccount = (Invoke-RestMethod @splatQueryParams).rows
 
-    if ($null -ne $correlatedAccount) {
+    if (($correlatedAccount | Measure-Object).Count -eq 1) {
         $lifecycleProcess = 'EnableAccount'
 
         if ([string]::IsNullOrWhiteSpace([string]$correlatedAccount.UsId)) {
             throw 'Correlated AFAS user is missing required identifier [Gebruiker/UsId]. Verify the AFAS GetConnector output.'
         }
-
-        $enableOutSiteMode = [string]$actionContext.Configuration.EnableOutSiteMode
-
-        # Lifecycle actions are evaluated first and merged into one API-call.
-        $lifecycleActions = @('UnblockUser', 'EnableInsite')
-
-        switch ($enableOutSiteMode) {
-            'ignoreOutSite' {
-                break
-            }
-            'disableOutSite' {
-                $lifecycleActions += 'DisableOutsite'
-                break
-            }
-            'enableOutSite' {
-                $lifecycleActions += 'EnableOutsite'
-                break
-            }
-            default {
-                throw "Unsupported EnableOutSiteMode value [$enableOutSiteMode]"
-            }
-        }
-
     }
     else {
         $lifecycleProcess = 'NotFound'
@@ -117,28 +94,31 @@ try {
         'EnableAccount' {
             # Mandatory fields
             $fieldsToUpdate = [ordered]@{
-                Nm = [string]$correlatedAccount.Nm
+                Nm   = [string]$correlatedAccount.Nm
                 MtCd = 1 # Import without changing the block status
             }
 
-            foreach ($lifecycleAction in $lifecycleActions) {
-                switch ($lifecycleAction) {
-                    'EnableInsite' {
-                        $fieldsToUpdate['InSi'] = 'true'
-                        continue
-                    }
-                    'EnableOutsite' {
-                        $fieldsToUpdate['Site'] = 'true'
-                        continue
-                    }
-                    'DisableOutsite' {
-                        $fieldsToUpdate['Site'] = 'false'
-                        continue
-                    }
-                    'UnblockUser' {
-                        $fieldsToUpdate['MtCd'] = 6 # Unblock user
-                        continue
-                    }
+            $lifecycleActions = @('UnblockUser', 'EnableInsite')
+            $fieldsToUpdate['MtCd'] = 6 # Unblock user
+            $fieldsToUpdate['InSi'] = 'true'
+            
+            $enableOutSiteMode = [string]$actionContext.Configuration.EnableOutSiteMode
+            switch ($enableOutSiteMode) {
+                'ignoreOutSite' {
+                    break
+                }
+                'disableOutSite' {
+                    $lifecycleActions += 'DisableOutsite'
+                    $fieldsToUpdate['Site'] = 'false'
+                    break
+                }
+                'enableOutSite' {
+                    $lifecycleActions += 'EnableOutsite'
+                    $fieldsToUpdate['Site'] = 'true'
+                    break
+                }
+                default {
+                    throw "Unsupported EnableOutSiteMode value [$enableOutSiteMode]"
                 }
             }
 

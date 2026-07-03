@@ -84,7 +84,7 @@ try {
             UseBasicParsing = $true
         }
 
-        $correlatedAccount = (Invoke-RestMethod @splatQueryParams).rows[0]
+        $correlatedAccount = (Invoke-RestMethod @splatQueryParams).rows
     }
     else {
         throw 'Correlation is not enabled but this connector only supports correlation.'

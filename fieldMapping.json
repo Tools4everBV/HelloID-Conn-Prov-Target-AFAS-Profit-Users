@@ -76,7 +76,7 @@
     },
     {
       "Name": "EmAd",
-      "Description": "E-mail",
+      "Description": "E-mail. Required for OutSite to be enabled. If EmAd is empty, OutSite cannot be enabled.",
       "Type": "Text",
       "MappingActions": [
         {
