@@ -76,9 +76,10 @@ try {
         ErrorAction     = 'Stop'
     }
 
-    $correlatedAccount = (Invoke-RestMethod @splatQueryParams).rows
+    $correlatedAccount = @((Invoke-RestMethod @splatQueryParams).rows)
 
-    if (($correlatedAccount | Measure-Object).Count -eq 1) {
+    if ($correlatedAccount.Count -eq 1) {
+        $correlatedAccount = $correlatedAccount[0]
         $lifecycleProcess = 'EnableAccount'
 
         if ([string]::IsNullOrWhiteSpace([string]$correlatedAccount.UsId)) {

@@ -126,13 +126,14 @@ try {
         ErrorAction     = 'Stop'
     }
 
-    $correlatedAccount = (Invoke-RestMethod @splatQueryParams).rows
+    $correlatedAccount = @((Invoke-RestMethod @splatQueryParams).rows)
     
     $lifecycleActionList = @()
     $newUsId = $null
     $currentUsId = $null
     $accountPropertiesChanged = @()
-    if (($correlatedAccount | Measure-Object).Count -eq 1) {
+    if ($correlatedAccount.Count -eq 1) {
+        $correlatedAccount = $correlatedAccount[0]
         $currentUsId = [string]$correlatedAccount.UsId
 
         $outputContext.PreviousData = $correlatedAccount | Select-Object -Property $outputContext.Data.PSObject.Properties.Name
@@ -163,7 +164,7 @@ try {
             $outputContext.Data.UsId = $correlatedAccount.UsId
         }
 
-        if (($accountPropertiesChanged | Measure-Object).Count -gt 0) {
+        if ($accountPropertiesChanged.Count -gt 0) {
             $lifecycleActionList += @('UpdateAccount')
         }
 

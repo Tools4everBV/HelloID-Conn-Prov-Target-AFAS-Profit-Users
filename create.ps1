@@ -74,7 +74,7 @@ try {
         }
 
         # Determine if a user needs to be [created] or [correlated]
-        Write-Information "Verifying if a {connectorName} account exists where $correlationField is: [$correlationValue]"
+        Write-Information "Verifying if a AFAS Profit Users account exists where $correlationField is: [$correlationValue]"
 
         $splatQueryParams = @{
             Uri             = "$($actionContext.Configuration.BaseUri)/connectors/$($actionContext.Configuration.GetConnector)?filterfieldids=$($correlationField)&filtervalues=$([uri]::EscapeDataString($correlationValue))&operatortypes=1"
@@ -84,19 +84,20 @@ try {
             UseBasicParsing = $true
         }
 
-        $correlatedAccount = (Invoke-RestMethod @splatQueryParams).rows
+        $correlatedAccount = @((Invoke-RestMethod @splatQueryParams).rows)
     }
     else {
         throw 'Correlation is not enabled but this connector only supports correlation.'
     }
 
-    if (($correlatedAccount | Measure-Object).Count -eq 0) {
+    if ($correlatedAccount.Count -eq 0) {
         $lifecycleProcess = 'NotFound'
     }
-    elseif (($correlatedAccount | Measure-Object).Count -eq 1) {
+    elseif ($correlatedAccount.Count -eq 1) {
+        $correlatedAccount = $correlatedAccount[0]
         $lifecycleProcess = 'CorrelateAccount'
     }
-    elseif (($correlatedAccount | Measure-Object).Count -gt 1) {
+    elseif ($correlatedAccount.Count -gt 1) {
         throw "Multiple accounts found for person where $correlationField is: [$correlationValue]"
     }    
 
