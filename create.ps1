@@ -104,10 +104,10 @@ try {
     # Process
     switch ($lifecycleProcess) {
         'CorrelateAccount' {
-            Write-Information "Correlating AFAS account [$($correlatedAccount.Persoonsnummer)]"
+            Write-Information "Correlating AFAS account [$($correlatedAccount.UsId)]"
 
             $outputContext.Data = $correlatedAccount | Select-Object -Property $outputContext.Data.PSObject.Properties.Name
-            $outputContext.AccountReference = $correlatedAccount.Persoonsnummer
+            $outputContext.AccountReference = $correlatedAccount.UsId
             $outputContext.AccountCorrelated = $true
             $outputContext.success = $true
             $auditLogMessage = "Correlated account: [$($outputContext.AccountReference)] on field: [$($correlationField)] with value: [$($correlationValue)]"

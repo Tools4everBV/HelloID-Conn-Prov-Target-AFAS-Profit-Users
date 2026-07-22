@@ -62,8 +62,8 @@ try {
         @{ DisplayName = 'AFAS Accept'; Reference = 'AcUs' }
     )
 
-    # Filter users where Medewerker has a value.
-    $filter = 'filterfieldids=Medewerker&filtervalues=%5Bis%20niet%20leeg%5D&operatortypes=9'
+    # Filter users where Medewerker en UsId has a value.
+    $filter = 'filterfieldids=Medewerker,UsId&filtervalues=%5Bis%20niet%20leeg%5D&operatortypes=9'
 
     $base64Token = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes($actionContext.Configuration.Token))
     $headers = @{
@@ -76,7 +76,7 @@ try {
     $accounts = [System.Collections.Generic.List[object]]::new()
 
     do {
-        $uri = "$($actionContext.Configuration.BaseUri)/connectors/$($actionContext.Configuration.GetConnector)?$filter&skip=$skip&take=$take&orderbyfieldids=Persoonsnummer"
+        $uri = "$($actionContext.Configuration.BaseUri)/connectors/$($actionContext.Configuration.GetConnector)?$filter&skip=$skip&take=$take&orderbyfieldids=UsId"
         $dataset = Invoke-RestMethod -Method 'GET' -Uri $uri -Headers $headers -ContentType 'application/json;charset=utf-8' -UseBasicParsing -ErrorAction Stop
         foreach ($row in @($dataset.rows)) {
             $null = $accounts.Add($row)
@@ -91,8 +91,8 @@ try {
             $property = $account.PSObject.Properties[$permission.Reference]
             $permissionValue = if ($null -eq $property) { $null } else { $property.Value }
 
-            if (($permissionValue -eq $true) -and -not [string]::IsNullOrWhiteSpace([string]$account.Persoonsnummer)) {
-                $null = $memberReferences.Add([string]$account.Persoonsnummer)
+            if (($permissionValue -eq $true) -and -not [string]::IsNullOrWhiteSpace([string]$account.UsId)) {
+                $null = $memberReferences.Add([string]$account.UsId)
             }
         }
 

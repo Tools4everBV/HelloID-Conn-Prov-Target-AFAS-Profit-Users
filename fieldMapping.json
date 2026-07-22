@@ -2,22 +2,6 @@
   "Version": "v1",
   "MappingFields": [
     {
-      "Name": "Persoonsnummer",
-      "Description": "[Required] Account reference",
-      "Type": "Text",
-      "MappingActions": [
-        {
-          "MapForActions": [
-            "Update"
-          ],
-          "MappingMode": "None",
-          "Value": "\"\"",
-          "UsedInNotifications": false,
-          "StoreInAccountData": true
-        }
-      ]
-    },
-    {
       "Name": "Medewerker",
       "Description": "[Required] Correlation value",
       "Type": "Text",
@@ -60,9 +44,18 @@
     },
     {
       "Name": "UsId",
-      "Description": "AFAS user code, only used when update toggle is enabled in connector configuration.",
+      "Description": "[Required] AFAS user code used as account reference. Update mapping only executed when update toggle is enabled in connector configuration.",
       "Type": "Text",
       "MappingActions": [
+{
+          "MapForActions": [
+            "Create"
+          ],
+          "MappingMode": "None",
+          "Value": "\"\"",
+          "UsedInNotifications": false,
+          "StoreInAccountData": true
+        },
         {
           "MapForActions": [
             "Update"
@@ -70,7 +63,7 @@
           "MappingMode": "Complex",
           "Value": "\"function getUsId() {\\n    let UsId = '<CustomerCode>' + '.' + Person.ExternalId;\\n    return UsId;\\n}\\n\\ngetUsId();\"",
           "UsedInNotifications": false,
-          "StoreInAccountData": false
+          "StoreInAccountData": true
         }
       ]
     },

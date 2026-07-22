@@ -54,7 +54,7 @@ try {
     Write-Information 'Starting AFAS Users account entitlement import'
    
     #Filter - Determine what defines an account entitlement, copy from AFAS Connect cURL
-    $Filter = "filterfieldids=Medewerker&filtervalues=%5Bis%20niet%20leeg%5D&operatortypes=9"
+    $Filter = "filterfieldids=Medewerker,UsId&filtervalues=%5Bis%20niet%20leeg%5D&operatortypes=9"
 
     Write-Verbose "Starting downloading objects through get-connector [$($actionContext.Configuration.GetConnector)]"
     $encodedToken = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($($actionContext.Configuration.Token)))
@@ -66,7 +66,7 @@ try {
     $skip = 0
 
     do {
-        $uri = $($actionContext.Configuration.BaseUri) + "/connectors/" + $($actionContext.Configuration.GetConnector) + "?$Filter&skip=$skip&take=$take&orderbyfieldids=Persoonsnummer"
+        $uri = $($actionContext.Configuration.BaseUri) + "/connectors/" + $($actionContext.Configuration.GetConnector) + "?$Filter&skip=$skip&take=$take&orderbyfieldids=UsId"
         $dataset = Invoke-RestMethod -Method Get -Uri $uri -Headers $Headers -UseBasicParsing
 
         foreach ($importedAccount in $dataset.rows) {
@@ -83,12 +83,12 @@ try {
 
             $displayName = [string]$importedAccount.Nm
             if ([string]::IsNullOrWhiteSpace($displayName)) {
-                $displayName = [string]$importedAccount.Persoonsnummer
+                $displayName = [string]$importedAccount.UsId
             }
 
             # Return the result
             Write-Output @{
-                AccountReference = $importedAccount.Persoonsnummer
+                AccountReference = $importedAccount.UsId
                 DisplayName      = $displayName.substring(0, [System.Math]::Min(100, $displayName.Length))
                 UserName         = $importedAccount.UsId
                 Enabled          = $enabled

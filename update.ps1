@@ -1,12 +1,12 @@
-#################################################
+﻿#################################################
 # HelloID-Conn-Prov-Target-AFAS-Profit-Users-Update
 # PowerShell V2
 #################################################
 
 #TODO: Remove hardcoded values
-$actionContext.References.Account = "1000525"
-$actionContext.Configuration.UpdateUserId = $true
-$actionContext.AccountCorrelated = $true
+# $actionContext.References.Account = "45963.AndreO"
+# $actionContext.Configuration.UpdateUserId = $true
+# $actionContext.AccountCorrelated = $true
 # $actionContext.DryRun = $false
 
 # Enable TLS1.2
@@ -108,8 +108,6 @@ try {
         throw 'The account reference could not be found'
     }
 
-    $outputContext.Data.Persoonsnummer = $actionContext.References.Account
-
     Write-Information 'Verifying if an AFAS Profit account exists'
     $base64Token = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes($actionContext.Configuration.Token))
     $headers = @{
@@ -118,7 +116,7 @@ try {
     }
 
     $splatQueryParams = @{
-        Uri             = "$($actionContext.Configuration.BaseUri)/connectors/$($actionContext.Configuration.GetConnector)?filterfieldids=Persoonsnummer&filtervalues=$([uri]::EscapeDataString($actionContext.References.Account))&operatortypes=1"
+        Uri             = "$($actionContext.Configuration.BaseUri)/connectors/$($actionContext.Configuration.GetConnector)?filterfieldids=UsId&filtervalues=$([uri]::EscapeDataString($actionContext.References.Account))&operatortypes=1"
         Headers         = $headers
         Method          = 'GET'
         ContentType     = 'application/json;charset=utf-8'
@@ -196,6 +194,7 @@ try {
                 }
 
                 $outputContext.Success = $true
+                $outputContext.AccountReference = [string]$newUsId
                 $outputContext.AuditLogs.Add([PSCustomObject]@{
                     Message = "Update account was successful, Account [UsId: $($currentUsId)] updated to [UsId: $($newUsId)]"
                     IsError = $false

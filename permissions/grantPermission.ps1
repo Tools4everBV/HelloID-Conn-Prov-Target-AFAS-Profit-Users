@@ -1,10 +1,10 @@
-################################################################
+﻿################################################################
 # HelloID-Conn-Prov-Target-AFAS-Profit-Users-GrantPermission
 # PowerShell V2
 ################################################################
 
 #TODO: Remove hardcoded values
-$actionContext.References.Account = "1000525"
+# $actionContext.References.Account = "45963.AndreO"
 # $actionContext.DryRun = $false
 
 # Enable TLS1.2
@@ -69,7 +69,7 @@ try {
     }
 
     $splatQueryParams = @{
-        Uri             = "$($actionContext.Configuration.BaseUri)/connectors/$($actionContext.Configuration.GetConnector)?filterfieldids=Persoonsnummer&filtervalues=$([uri]::EscapeDataString($actionContext.References.Account))&operatortypes=1"
+        Uri             = "$($actionContext.Configuration.BaseUri)/connectors/$($actionContext.Configuration.GetConnector)?filterfieldids=UsId&filtervalues=$([uri]::EscapeDataString($actionContext.References.Account))&operatortypes=1"
         Headers         = $headers
         Method          = 'GET'
         ContentType     = 'application/json;charset=utf-8'
