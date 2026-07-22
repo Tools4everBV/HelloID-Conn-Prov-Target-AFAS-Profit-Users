@@ -55,39 +55,39 @@
     }
   },
   {
-    "key": "EnableOutSiteMode",
+    "key": "DisableMode",
     "type": "select",
-    "defaultValue": "disableOutSite",
+    "defaultValue": "enableOutSiteNoBlock",
     "templateOptions": {
-      "label": "Behavior on enable",
-      "description": "Choose how OutSite is handled during enable.",
+      "label": "Behavior on disable during a reconciliation action",
+      "description": "Choose how block status, group memberships, and OutSite are handled during disable.",
       "options": [
         {
-          "label": "Set OutSite to disabled",
-          "value": "disableOutSite"
+          "label": "OutSite enabled, no block",
+          "value": "enableOutSiteNoBlock"
         },
         {
-          "label": "Do not alter OutSite",
-          "value": "ignoreOutSite"
+          "label": "Block user and keep groups, OutSite disabled",
+          "value": "blockKeepGroupsDisableOutSite"
         },
         {
-        "label": "Set OutSite to enabled",
-          "value": "enableOutSite"
+          "label": "Block user and remove groups, OutSite disabled",
+          "value": "blockRemoveGroupsDisableOutSite"
         }
       ],
       "required": true
     }
   },
   {
-    "key": "DisableDeleteMode",
+    "key": "DeleteMode",
     "type": "select",
     "defaultValue": "enableOutSiteNoBlock",
     "templateOptions": {
-      "label": "Behavior on disable and delete",
-      "description": "Choose how block status, group memberships, and OutSite are handled during disable and delete.",
+      "label": "Behavior on delete during a reconciliation action",
+      "description": "Choose how block status, group memberships, and OutSite are handled during delete.",
       "options": [
         {
-          "label": "OutSite enabled, no block",
+          "label": "OutSite enabled, no block, set email to a dummy value",
           "value": "enableOutSiteNoBlock"
         },
         {

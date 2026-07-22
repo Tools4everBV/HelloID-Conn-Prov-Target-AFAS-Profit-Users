@@ -109,6 +109,11 @@ try {
             }
             $fieldsToUpdate[$permissionReference] = 'false'
 
+            # AFAS dependency: InSi cannot be disabled while Profit Windows is still active.
+            if ($permissionReference -eq 'InSi' -and [bool]$correlatedAccount.Awin) {
+                $fieldsToUpdate['Awin'] = 'false'
+            }
+
             $updateAccount = [PSCustomObject]@{
                 KnUser = @{
                     Element = @{
@@ -133,11 +138,21 @@ try {
                 Write-Information "Revoking AFAS Profit permission: [$($actionContext.PermissionDisplayName)] - [$permissionReference]"
                 $null = Invoke-RestMethod @splatUpdateParams -Verbose:$false
 
-                $auditLogMessage = "Revoked permission [$($actionContext.PermissionDisplayName)]. Action initiated by: [$($actionContext.Origin)]"
+                if ($permissionReference -eq 'InSi' -and [bool]$correlatedAccount.Awin) {
+                    $auditLogMessage = "Revoked permission [$($actionContext.PermissionDisplayName)] and disabled dependent permission [Awin]. Action initiated by: [$($actionContext.Origin)]"
+                }
+                else {
+                    $auditLogMessage = "Revoked permission [$($actionContext.PermissionDisplayName)]. Action initiated by: [$($actionContext.Origin)]"
+                }
             }
             else {
                 Write-Information "[DryRun] Revoke AFAS Profit permission: [$($actionContext.PermissionDisplayName)] - [$permissionReference], will be executed during enforcement"
-                $auditLogMessage = "[DryRun] Would revoke permission [$($actionContext.PermissionDisplayName)]. Action initiated by: [$($actionContext.Origin)]"
+                if ($permissionReference -eq 'InSi' -and [bool]$correlatedAccount.Awin) {
+                    $auditLogMessage = "[DryRun] Would revoke permission [$($actionContext.PermissionDisplayName)] and disable dependent permission [Awin]. Action initiated by: [$($actionContext.Origin)]"
+                }
+                else {
+                    $auditLogMessage = "[DryRun] Would revoke permission [$($actionContext.PermissionDisplayName)]. Action initiated by: [$($actionContext.Origin)]"
+                }
             }
 
             $outputContext.Success = $true

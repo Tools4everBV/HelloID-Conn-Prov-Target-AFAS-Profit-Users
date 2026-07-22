@@ -1,4 +1,4 @@
-#################################################
+﻿#################################################
 # HelloID-Conn-Prov-Target-AFAS-Profit-Users-Disable
 # PowerShell V2
 #################################################
@@ -99,38 +99,35 @@ try {
                 MtCd = 1 # Import without changing the block status
             }
 
-            $lifecycleActions = @('DisableInsite')
-            
-            if ($correlatedAccount.Awin) {
-                $lifecycleActions += 'DisableProfitWindows'
-                $fieldsToUpdate['Awin'] = 'false'
+            if ($actionContext.Origin -ne 'reconciliation') {
+                foreach ($property in $actionContext.Data.PSObject.Properties) {
+                    $fieldsToUpdate[$property.Name] = $property.Value
+                }
+            }
+            else {
+                # Reconciliation fallback for disable behavior when no mapping data is available.
+                $disableMode = [string]$actionContext.Configuration.DisableMode
+                switch ($disableMode) {
+                    'blockKeepGroupsDisableOutSite' {
+                        $fieldsToUpdate['Site'] = 'false'
+                        $fieldsToUpdate['MtCd'] = 2
+                        break
+                    }
+                    'blockRemoveGroupsDisableOutSite' {
+                        $fieldsToUpdate['Site'] = 'false'
+                        $fieldsToUpdate['MtCd'] = 0
+                        break
+                    }
+                    'enableOutSiteNoBlock' {
+                        $fieldsToUpdate['Site'] = 'true'
+                        break
+                    }
+                    default {
+                        throw "Unsupported DisableMode value [$disableMode]"
+                    }
+                }
             }
 
-            $disableDeleteMode = [string]$actionContext.Configuration.DisableDeleteMode
-            switch ($disableDeleteMode) {
-                'blockKeepGroupsDisableOutSite' {
-                    $lifecycleActions += 'DisableOutsite'
-                    $lifecycleActions += 'BlockUserKeepGroups'
-                    $fieldsToUpdate['Site'] = 'false'
-                    $fieldsToUpdate['MtCd'] = 2
-                    break
-                }
-                'blockRemoveGroupsDisableOutSite' {
-                    $lifecycleActions += 'DisableOutsite'
-                    $lifecycleActions += 'BlockUserRemoveGroups'
-                    $fieldsToUpdate['Site'] = 'false'
-                    $fieldsToUpdate['MtCd'] = 0
-                    break
-                }
-                'enableOutSiteNoBlock' {
-                    $lifecycleActions += 'EnableOutsite'
-                    $fieldsToUpdate['Site'] = 'true'
-                    break
-                }
-                default {
-                    throw "Unsupported DisableDeleteMode value [$disableDeleteMode]"
-                }
-            }
 
             $updateAccount = [PSCustomObject]@{
                 KnUser = @{
@@ -142,6 +139,7 @@ try {
             }
 
             $body = ($updateAccount | ConvertTo-Json -Depth 10)
+            $fieldsInPayload = ($actionContext.Data.PSObject.Properties.Name | ForEach-Object { [string]$_ }) -join ', '
             $splatUpdateParams = @{
                 Uri             = "$($actionContext.Configuration.BaseUri)/connectors/$($actionContext.Configuration.UpdateConnector)"
                 Headers         = $headers
@@ -153,13 +151,13 @@ try {
             }
 
             if (-not($actionContext.DryRun -eq $true)) {
-                Write-Information "Disabling AFAS Profit account with accountReference: [$($actionContext.References.Account)]"
+                Write-Information "Disabling AFAS Profit account with accountReference: [$($actionContext.References.Account)]. Fields in update: [$fieldsInPayload]"
                 $null = Invoke-RestMethod @splatUpdateParams -Verbose:$false
-                $auditLogMessage = "Disabled AFAS Profit account with accountReference: [$($actionContext.References.Account)] using actions [$($lifecycleActions -join ', ')]"
+                $auditLogMessage = "Disabled AFAS Profit account with accountReference: [$($actionContext.References.Account)]. Account property(s) updated: [$fieldsInPayload]"
             }
             else {
-                Write-Information "[DryRun] Disable AFAS Profit account with accountReference: [$($actionContext.References.Account)], will be executed during enforcement using actions [$($lifecycleActions -join ', ')]"
-                $auditLogMessage = "[DryRun] Would disable AFAS Profit account with accountReference: [$($actionContext.References.Account)] using actions [$($lifecycleActions -join ', ')]"
+                Write-Information "[DryRun] Disable AFAS Profit account with accountReference: [$($actionContext.References.Account)], will be executed during enforcement. Fields in update: [$fieldsInPayload]"
+                $auditLogMessage = "[DryRun] Would disable AFAS Profit account with accountReference: [$($actionContext.References.Account)]. Account property(s) to update: [$fieldsInPayload]"
             }
 
             $outputContext.Success = $true

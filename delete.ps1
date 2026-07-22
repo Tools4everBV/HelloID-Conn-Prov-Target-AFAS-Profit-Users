@@ -1,4 +1,4 @@
-##################################################
+﻿##################################################
 # HelloID-Conn-Prov-Target-AFAS-Profit-Users-Delete
 # PowerShell V2
 ##################################################
@@ -87,37 +87,9 @@ try {
         if ([string]::IsNullOrWhiteSpace([string]$correlatedAccount.UsId)) {
             throw 'Correlated AFAS user is missing required identifier [Gebruiker/UsId]. Verify the AFAS GetConnector output.'
         }
-        elseif ($correlatedAccount.Awin -or $correlatedAccount.OcUs -or $correlatedAccount.PoMa -or $correlatedAccount.AcUs) {
-            throw 'Correlated AFAS user has active permissions preventing InSite access from being disabled.'
-        }
 
-        $disableDeleteMode = [string]$actionContext.Configuration.DisableDeleteMode
+        $deleteMode = [string]$actionContext.Configuration.DeleteMode
 
-        # Lifecycle actions are evaluated first and merged into one API-call.
-        $lifecycleActions = @(
-            'DisableInsite'
-        )
-
-        # Only include UpdateAccount action when there are data changes and not in reconciliation (where data is unavailable).
-        $propertiesChanged = $null
-        if ($actionContext.Origin -ne 'reconciliation') {
-            $splatCompareProperties = @{
-                ReferenceObject  = @($correlatedAccount.PSObject.Properties)
-                DifferenceObject = @(
-                    $actionContext.Data.PSObject.Properties | ForEach-Object {
-                        if ($_.Value -is [string] -and $_.Value -eq '') { $_.Value = $null }
-                        if ($_.Value -is [string] -and $_.Value -eq "false") { $_.Value = $false }
-                        if ($_.Value -is [string] -and $_.Value -eq "true") { $_.Value = $true }
-                        $_
-                    }
-                )
-            }
-            $propertiesChanged = Compare-Object @splatCompareProperties -PassThru | Where-Object { $_.SideIndicator -eq '=>' }
-
-            if ($propertiesChanged) {
-                $lifecycleActions = @('UpdateAccount') + $lifecycleActions
-            }
-        }
     }
     else {
         $lifecycleProcess = 'NotFound'
@@ -132,40 +104,44 @@ try {
                 MtCd = 1 # Import without changing the block status
             }
 
+            if ($actionContext.Origin -ne 'reconciliation') {
+                foreach ($property in $actionContext.Data.PSObject.Properties) {
+                    $fieldsToUpdate[$property.Name] = $property.Value
+                }
+            }
+
             # We can only support certain actions during reconciliation.
             if ($actionContext.Origin -eq 'reconciliation') {                
-                if ($disableDeleteMode -in @('blockKeepGroupsDisableOutSite', 'blockRemoveGroupsDisableOutSite')) {
+                $fieldsToUpdate['Upn'] = $null
+                if ($deleteMode -in @('blockKeepGroupsDisableOutSite', 'blockRemoveGroupsDisableOutSite')) {
                     # Clear email and upn so OutSite can be disabled
-                    $fieldsToUpdate['Upn'] = $null
                     $fieldsToUpdate['EmAd'] = $null
                 }
                 else {
-                    throw 'Reconciliation is not supported for Delete action where OutSite needs to stay enabled. Please reconcile the account manually in AFAS Profit.'
+                    $upnDomain = $correlatedAccount.EmAd.Split('@')[1]
+                    $fieldsToUpdate['EmAd'] = "$($actionContext.References.Account)@$upnDomain"
                 }
-            } #TODO: Repurpose configuration.json options for reconciliation only since there is no fieldmapping. For the non-reconciliation scenario, the fieldmapping is used to determine which fields are updated. If Outsite stays enabled, then Upn and EmAd can become "accountReference@domain.com"
+            }
 
-            switch ($disableDeleteMode) {
-                'blockKeepGroupsDisableOutSite' {
-                    $lifecycleActions += 'DisableOutsite'
-                    $lifecycleActions += 'BlockUserKeepGroups'
-                    $fieldsToUpdate['Site'] = 'false'
-                    $fieldsToUpdate['MtCd'] = 2
-                    break
-                }
-                'blockRemoveGroupsDisableOutSite' {
-                    $lifecycleActions += 'DisableOutsite'
-                    $lifecycleActions += 'BlockUserRemoveGroups'
-                    $fieldsToUpdate['Site'] = 'false'
-                    $fieldsToUpdate['MtCd'] = 0
-                    break
-                }
-                'enableOutSiteNoBlock' {
-                    $lifecycleActions += 'EnableOutsite'
-                    $fieldsToUpdate['Site'] = 'true'
-                    break
-                }
-                default {
-                    throw "Unsupported DisableDeleteMode value [$disableDeleteMode]"
+            if ($actionContext.Origin -eq 'reconciliation') {
+                switch ($deleteMode) {
+                    'blockKeepGroupsDisableOutSite' {
+                        $fieldsToUpdate['Site'] = 'false'
+                        $fieldsToUpdate['MtCd'] = 2
+                        break
+                    }
+                    'blockRemoveGroupsDisableOutSite' {
+                        $fieldsToUpdate['Site'] = 'false'
+                        $fieldsToUpdate['MtCd'] = 0
+                        break
+                    }
+                    'enableOutSiteNoBlock' {
+                        $fieldsToUpdate['Site'] = 'true'
+                        break
+                    }
+                    default {
+                        throw "Unsupported DeleteMode value [$deleteMode]"
+                    }
                 }
             }
 
@@ -179,6 +155,7 @@ try {
             }
 
             $body = ($updateAccount | ConvertTo-Json -Depth 10)
+            $fieldsInPayload = ($actionContext.Data.PSObject.Properties.Name | ForEach-Object { [string]$_ }) -join ', '
             $splatUpdateParams = @{
                 Uri             = "$($actionContext.Configuration.BaseUri)/connectors/$($actionContext.Configuration.UpdateConnector)"
                 Headers         = $headers
@@ -190,13 +167,13 @@ try {
             }
             
             if (-not($actionContext.DryRun -eq $true)) {
-                Write-Information "Deleting AFAS Profit account with accountReference: [$($actionContext.References.Account)]"
+                Write-Information "Deleting AFAS Profit account with accountReference: [$($actionContext.References.Account)]. Fields in update: [$fieldsInPayload]"
                 $null = Invoke-RestMethod @splatUpdateParams -Verbose:$false
-                $auditLogMessage = "Delete AFAS Profit account with accountReference: [$($actionContext.References.Account)] was successful using actions [$($lifecycleActions -join ', ')]. Action initiated by: [$($actionContext.Origin)]"
+                $auditLogMessage = "Delete AFAS Profit account with accountReference: [$($actionContext.References.Account)] was successful. Account property(s) updated: [$fieldsInPayload]. Action initiated by: [$($actionContext.Origin)]"
             }
             else {
-                Write-Information "[DryRun] Delete AFAS Profit account with accountReference: [$($actionContext.References.Account)], will be executed during enforcement using actions [$($lifecycleActions -join ', ')]"
-                $auditLogMessage = "[DryRun] Would delete AFAS Profit account with accountReference: [$($actionContext.References.Account)] using actions [$($lifecycleActions -join ', ')]. Action initiated by: [$($actionContext.Origin)]"
+                Write-Information "[DryRun] Delete AFAS Profit account with accountReference: [$($actionContext.References.Account)], will be executed during enforcement. Fields in update: [$fieldsInPayload]"
+                $auditLogMessage = "[DryRun] Would delete AFAS Profit account with accountReference: [$($actionContext.References.Account)]. Account property(s) to update: [$fieldsInPayload]. Action initiated by: [$($actionContext.Origin)]"
             }
 
             $outputContext.Success = $true

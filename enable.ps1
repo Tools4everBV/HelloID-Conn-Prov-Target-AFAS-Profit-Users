@@ -1,4 +1,4 @@
-#################################################
+﻿#################################################
 # HelloID-Conn-Prov-Target-AFAS-Profit-Users-Enable
 # PowerShell V2
 #################################################
@@ -99,28 +99,8 @@ try {
                 MtCd = 1 # Import without changing the block status
             }
 
-            $lifecycleActions = @('UnblockUser', 'EnableInsite')
-            $fieldsToUpdate['MtCd'] = 6 # Unblock user
-            $fieldsToUpdate['InSi'] = 'true'
-            
-            $enableOutSiteMode = [string]$actionContext.Configuration.EnableOutSiteMode
-            switch ($enableOutSiteMode) {
-                'ignoreOutSite' {
-                    break
-                }
-                'disableOutSite' {
-                    $lifecycleActions += 'DisableOutsite'
-                    $fieldsToUpdate['Site'] = 'false'
-                    break
-                }
-                'enableOutSite' {
-                    $lifecycleActions += 'EnableOutsite'
-                    $fieldsToUpdate['Site'] = 'true'
-                    break
-                }
-                default {
-                    throw "Unsupported EnableOutSiteMode value [$enableOutSiteMode]"
-                }
+            foreach ($property in $actionContext.Data.PSObject.Properties) {
+                $fieldsToUpdate[$property.Name] = $property.Value
             }
 
             $updateAccount = [PSCustomObject]@{
@@ -133,6 +113,7 @@ try {
             }
 
             $body = ($updateAccount | ConvertTo-Json -Depth 10)
+            $fieldsInPayload = ($actionContext.Data.PSObject.Properties.Name | ForEach-Object { [string]$_ }) -join ', '
             $splatUpdateParams = @{
                 Uri             = "$($actionContext.Configuration.BaseUri)/connectors/$($actionContext.Configuration.UpdateConnector)"
                 Headers         = $headers
@@ -144,13 +125,13 @@ try {
             }
 
             if (-not($actionContext.DryRun -eq $true)) {
-                Write-Information "Enabling AFAS Profit account with accountReference: [$($actionContext.References.Account)]"
+                 Write-Information "Enabling AFAS Profit account with accountReference: [$($actionContext.References.Account)]. Fields in update: [$fieldsInPayload]"
                 $null = Invoke-RestMethod @splatUpdateParams -Verbose:$false
-                $auditLogMessage = "Enabled AFAS Profit account with accountReference: [$($actionContext.References.Account)] using actions [$($lifecycleActions -join ', ')]"
+                  $auditLogMessage = "Enabled AFAS Profit account with accountReference: [$($actionContext.References.Account)]. Account property(s) updated: [$fieldsInPayload]"
             }
             else {
-                Write-Information "[DryRun] Enable AFAS Profit account with accountReference: [$($actionContext.References.Account)], will be executed during enforcement using actions [$($lifecycleActions -join ', ')]"
-                $auditLogMessage = "[DryRun] Would enable AFAS Profit account with accountReference: [$($actionContext.References.Account)] using actions [$($lifecycleActions -join ', ')]"
+                  Write-Information "[DryRun] Enable AFAS Profit account with accountReference: [$($actionContext.References.Account)], will be executed during enforcement. Fields in update: [$fieldsInPayload]"
+                  $auditLogMessage = "[DryRun] Would enable AFAS Profit account with accountReference: [$($actionContext.References.Account)]. Account property(s) to update: [$fieldsInPayload]"
             }
 
             $outputContext.Success = $true

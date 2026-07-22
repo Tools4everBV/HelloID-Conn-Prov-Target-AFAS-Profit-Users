@@ -5,7 +5,7 @@
 
 try {
     $retrievedPermissions = @(
-        # @{ DisplayName = 'InSite Access'; Reference = 'InSi' }
+        @{ DisplayName = 'InSite Access'; Reference = 'InSi' },
         @{ DisplayName = 'Profit Windows access'; Reference = 'Awin' }
         @{ DisplayName = 'Activate collaboration license'; Reference = 'OcUs' },
         @{ DisplayName = 'AFAS Online Portal administrator'; Reference = 'PoMa' },

@@ -47,7 +47,7 @@
       "Description": "[Required] AFAS user code used as account reference. Update mapping only executed when update toggle is enabled in connector configuration.",
       "Type": "Text",
       "MappingActions": [
-{
+        {
           "MapForActions": [
             "Create"
           ],
@@ -87,6 +87,58 @@
           ],
           "MappingMode": "Complex",
           "Value": "\"function getEmail() {\\r\\n    return null;\\r\\n}\\r\\n\\r\\ngetEmail();\"",
+          "UsedInNotifications": false,
+          "StoreInAccountData": false
+        }
+      ]
+    },
+    {
+      "Name": "Site",
+      "Description": "OutSite. EmAd is required for OutSite to be enabled. If EmAd is empty, OutSite cannot be enabled.",
+      "Type": "Text",
+      "MappingActions": [
+        {
+          "MapForActions": [
+            "Enable"
+          ],
+          "MappingMode": "Fixed",
+          "Value": "false",
+          "UsedInNotifications": false,
+          "StoreInAccountData": false
+        },
+        {
+          "MapForActions": [
+            "Disable",
+            "Delete"
+          ],
+          "MappingMode": "Fixed",
+          "Value": "false",
+          "UsedInNotifications": false,
+          "StoreInAccountData": false
+        }
+      ]
+    },
+    {
+      "Name": "MtCd",
+      "Description": "Mutation code. The scripts use code 1 when omitted.\n\n0: block user and remove groups\n1: update user\n2: block user and keep groups\n3: update user\n4: change UsId (do not use, handled in update script)\n5: change password (do not use)\n6: unblock user",
+      "Type": "Text",
+      "MappingActions": [
+        {
+          "MapForActions": [
+            "Enable"
+          ],
+          "MappingMode": "Fixed",
+          "Value": "\"6\"",
+          "UsedInNotifications": false,
+          "StoreInAccountData": false
+        },
+        {
+          "MapForActions": [
+            "Disable",
+            "Delete"
+          ],
+          "MappingMode": "Fixed",
+          "Value": "\"2\"",
           "UsedInNotifications": false,
           "StoreInAccountData": false
         }
