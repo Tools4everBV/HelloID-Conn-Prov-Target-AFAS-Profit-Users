@@ -1,4 +1,4 @@
-####################################################################
+﻿####################################################################
 # HelloID-Conn-Prov-Target-AFAS-Profit-Users-ImportPermissions
 # PowerShell V2
 ####################################################################
@@ -85,14 +85,17 @@ try {
     } while (@($dataset.rows).Count -eq $take)
 
     foreach ($permission in $permissionsToImport) {
-        $memberReferences = [System.Collections.Generic.List[string]]::new()
+        $memberReferences = [System.Collections.Generic.List[object]]::new()
 
         foreach ($account in $accounts) {
             $property = $account.PSObject.Properties[$permission.Reference]
             $permissionValue = if ($null -eq $property) { $null } else { $property.Value }
 
-            if (($permissionValue -eq $true) -and -not [string]::IsNullOrWhiteSpace([string]$account.UsId)) {
-                $null = $memberReferences.Add([string]$account.UsId)
+            if (($permissionValue -eq $true) -and -not [string]::IsNullOrWhiteSpace([string]$account.UsId) -and -not [string]::IsNullOrWhiteSpace([string]$account.Medewerker)) {
+                $null = $memberReferences.Add([PSCustomObject]@{
+                    UsId       = [string]$account.UsId
+                    Medewerker = [string]$account.Medewerker
+                })
             }
         }
 

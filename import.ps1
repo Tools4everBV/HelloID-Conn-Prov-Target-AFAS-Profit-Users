@@ -1,4 +1,4 @@
-#################################################
+﻿#################################################
 # HelloID-Conn-Prov-Target-AFAS-Profit-Users-Import
 # PowerShell V2
 #################################################
@@ -88,7 +88,10 @@ try {
 
             # Return the result
             Write-Output @{
-                AccountReference = $importedAccount.UsId
+                AccountReference = [PSCustomObject]@{
+                    UsId = [string]$importedAccount.UsId
+                    Medewerker = [string]$importedAccount.Medewerker
+                }
                 DisplayName      = $displayName.substring(0, [System.Math]::Min(100, $displayName.Length))
                 UserName         = $importedAccount.UsId
                 Enabled          = $enabled

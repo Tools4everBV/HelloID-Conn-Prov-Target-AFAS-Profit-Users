@@ -1,4 +1,4 @@
-#################################################
+﻿#################################################
 # HelloID-Conn-Prov-Target-AFAS-Profit-Users-Create
 # PowerShell V2
 #################################################
@@ -107,7 +107,10 @@ try {
             Write-Information "Correlating AFAS account [$($correlatedAccount.UsId)]"
 
             $outputContext.Data = $correlatedAccount | Select-Object -Property $outputContext.Data.PSObject.Properties.Name
-            $outputContext.AccountReference = $correlatedAccount.UsId
+            $outputContext.AccountReference = [PSCustomObject]@{ 
+                UsId = [string]$correlatedAccount.UsId
+                Medewerker = [string]$correlatedAccount.Medewerker
+            }
             $outputContext.AccountCorrelated = $true
             $outputContext.success = $true
             $auditLogMessage = "Correlated account: [$($outputContext.AccountReference)] on field: [$($correlationField)] with value: [$($correlationValue)]"
