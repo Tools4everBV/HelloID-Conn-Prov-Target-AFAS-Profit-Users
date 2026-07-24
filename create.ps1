@@ -53,6 +53,7 @@ function Resolve-AFAS-ProfitError {
 try {
     # Initial Assignments
     $outputContext.AccountReference = 'Currently not available'
+    $createUserEnabled = [bool]$actionContext.Configuration.CreateUser
 
     # Encode token for AFAS API authentication
     $base64Token = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes($actionContext.Configuration.Token))
@@ -76,8 +77,9 @@ try {
         # Determine if a user needs to be [created] or [correlated]
         Write-Information "Verifying if a AFAS Profit Users account exists where $correlationField is: [$correlationValue]"
 
+        $notEmptyFilterValue = [uri]::EscapeDataString('[is niet leeg]')
         $splatQueryParams = @{
-            Uri             = "$($actionContext.Configuration.BaseUri)/connectors/$($actionContext.Configuration.GetConnector)?filterfieldids=$($correlationField)&filtervalues=$([uri]::EscapeDataString($correlationValue))&operatortypes=1"
+            Uri             = "$($actionContext.Configuration.BaseUri)/connectors/$($actionContext.Configuration.GetConnector)?filterfieldids=$($correlationField),BcCo&filtervalues=$([uri]::EscapeDataString($correlationValue)),$notEmptyFilterValue&operatortypes=1,9"
             Method          = 'GET'
             Headers         = $authHeader
             ContentType     = "application/json;charset=utf-8"
@@ -91,11 +93,21 @@ try {
     }
 
     if ($correlatedAccount.Count -eq 0) {
-        $lifecycleProcess = 'CreateAccount'
+        $lifecycleProcess = 'NotFound'
     }
     elseif ($correlatedAccount.Count -eq 1) {
         $correlatedAccount = $correlatedAccount[0]
-        $lifecycleProcess = 'CorrelateAccount'
+        if ([string]::IsNullOrWhiteSpace([string]$correlatedAccount.UsId)) {
+            if ($createUserEnabled) {
+                $lifecycleProcess = 'CreateAccount'
+            }
+            else {
+                $lifecycleProcess = 'CreateNotEnabled'
+            }
+        }
+        else {
+            $lifecycleProcess = 'CorrelateAccount'
+        }
     }
     elseif ($correlatedAccount.Count -gt 1) {
         throw "Multiple accounts found for person where $correlationField is: [$correlationValue]"
@@ -106,9 +118,11 @@ try {
         'CreateAccount' {
             $newUsId = [string]$actionContext.Data.UsId
 
+            $personNumber = [string]$correlatedAccount.BcCo
+
             # Build a base payload with permission-related flags managed by the script.
             $fieldsToCreate = [ordered]@{
-                BcCo = [string]$correlationValue
+                BcCo = $personNumber
                 Acon = 'false'
                 Abac = 'false'
                 Acom = 'false'
@@ -148,20 +162,16 @@ try {
                 $null = Invoke-RestMethod @splatCreateParams -Verbose:$false
 
                 $outputContext.Data = $actionContext.Data | Select-Object -Property $outputContext.Data.PSObject.Properties.Name
-                $outputContext.AccountReference = [PSCustomObject]@{
-                    UsId       = $newUsId
-                    Medewerker = [string]$fieldsToCreate['Medewerker']
-                }
+                $outputContext.Data.BcCo = $personNumber
+                $outputContext.AccountReference = [string]$fieldsToCreate['BcCo']
 
                 $auditLogMessage = "Created and correlated AFAS account with accountReference: [$($outputContext.AccountReference)]. Account property(s) set: [$fieldsInPayload]"
             }
             else {
                 Write-Information "[DryRun] Create and correlate AFAS account [$newUsId], will be executed during enforcement. Fields in create payload: [$fieldsInPayload]"
                 $outputContext.Data = $actionContext.Data | Select-Object -Property $outputContext.Data.PSObject.Properties.Name
-                $outputContext.AccountReference = [PSCustomObject]@{
-                    UsId       = $newUsId
-                    Medewerker = [string]$fieldsToCreate['Medewerker']
-                }
+                $outputContext.Data.BcCo = $personNumber
+                $outputContext.AccountReference = [string]$fieldsToCreate['BcCo']
                 $auditLogMessage = "[DryRun] Would create and correlate AFAS account with accountReference: [$($outputContext.AccountReference)]. Account property(s) to set: [$fieldsInPayload]"
             }
 
@@ -174,14 +184,24 @@ try {
             break
         }
 
+        'CreateNotEnabled' {
+            $auditLogMessage = "Correlated AFAS account has no UsId for [$($correlationField)] = [$($correlationValue)], but configuration [CreateUser] is disabled."
+            Write-Information $auditLogMessage
+
+            $outputContext.Success = $false
+            $outputContext.AuditLogs.Add([PSCustomObject]@{
+                    Action  = $lifecycleProcess
+                    Message = $auditLogMessage
+                    IsError = $true
+                })
+            break
+        }
+
         'CorrelateAccount' {
             Write-Information "Correlating AFAS account [$($correlatedAccount.UsId)]"
 
             $outputContext.Data = $correlatedAccount | Select-Object -Property $outputContext.Data.PSObject.Properties.Name
-            $outputContext.AccountReference = [PSCustomObject]@{ 
-                UsId = [string]$correlatedAccount.UsId
-                Medewerker = [string]$correlatedAccount.Medewerker
-            }
+            $outputContext.AccountReference = [string]$correlatedAccount.BcCo
             $outputContext.AccountCorrelated = $true
             $outputContext.success = $true
             $auditLogMessage = "Correlated account: [$($outputContext.AccountReference)] on field: [$($correlationField)] with value: [$($correlationValue)]"
@@ -189,6 +209,19 @@ try {
                     Action  = $lifecycleProcess
                     Message = $auditLogMessage
                     IsError = $false
+                })
+            break
+        }
+
+        'NotFound' {
+            $auditLogMessage = "No AFAS account found where [$($correlationField)] = [$($correlationValue)]. Cannot create user without correlated person number [BcCo]."
+            Write-Information $auditLogMessage
+
+            $outputContext.Success = $false
+            $outputContext.AuditLogs.Add([PSCustomObject]@{
+                    Action  = $lifecycleProcess
+                    Message = $auditLogMessage
+                    IsError = $true
                 })
             break
         }

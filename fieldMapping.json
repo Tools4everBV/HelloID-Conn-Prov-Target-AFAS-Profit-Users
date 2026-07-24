@@ -68,6 +68,22 @@
       ]
     },
     {
+      "Name": "BcCo",
+      "Description": "Person number. Filled by the create/correlate script and stored in account data.",
+      "Type": "Text",
+      "MappingActions": [
+        {
+          "MapForActions": [
+            "Create"
+          ],
+          "MappingMode": "None",
+          "Value": "\"\"",
+          "UsedInNotifications": false,
+          "StoreInAccountData": true
+        }
+      ]
+    },
+    {
       "Name": "EmAd",
       "Description": "E-mail. Required for OutSite to be enabled. If EmAd is empty, OutSite cannot be enabled.",
       "Type": "Text",

@@ -55,6 +55,16 @@
     }
   },
   {
+    "key": "CreateUser",
+    "type": "checkbox",
+    "defaultValue": false,
+    "templateOptions": {
+      "label": "Create user when Medewerker has no UsId",
+      "required": false,
+      "description": "When enabled, create action may create a new AFAS user if the correlated Medewerker has no UsId. Default behavior is correlate-only."
+    }
+  },
+  {
     "key": "DisableMode",
     "type": "select",
     "defaultValue": "enableOutSiteNoBlock",
