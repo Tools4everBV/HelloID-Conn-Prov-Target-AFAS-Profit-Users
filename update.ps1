@@ -129,6 +129,7 @@ try {
     $correlatedAccount = @((Invoke-RestMethod @splatQueryParams).rows)
 
     $lifecycleActionList = @()
+    $updateUserIdEnabled = [bool]$actionContext.Configuration.UpdateUserId
     $newUsId = $null
     $currentUsId = $null
     $accountPropertiesChanged = @()
@@ -139,16 +140,23 @@ try {
 
         $outputContext.PreviousData = $correlatedAccount | Select-Object -Property $outputContext.Data.PSObject.Properties.Name
         
+        $mappedProperties = @($actionContext.Data.PSObject.Properties | ForEach-Object {
+                if ($_.Value -is [string] -and $_.Value -eq '') { $_.Value = $null }
+                if ($_.Value -is [string] -and $_.Value -eq "false") { $_.Value = $false }
+                if ($_.Value -is [string] -and $_.Value -eq "true") { $_.Value = $true }
+                $_
+            }
+        )
+
+        # Only use mapped UsId when explicit UpdateUserId is enabled.
+        if (-not $updateUserIdEnabled) {
+            $mappedProperties = @($mappedProperties | Where-Object { $_.Name -ne 'UsId' })
+        }
+
         # Always compare the account against the current account in target system
         $splatCompareProperties = @{
             ReferenceObject  = @($correlatedAccount.PSObject.Properties)
-            DifferenceObject = @($actionContext.Data.PSObject.Properties | ForEach-Object {
-                    if ($_.Value -is [string] -and $_.Value -eq '') { $_.Value = $null }
-                    if ($_.Value -is [string] -and $_.Value -eq "false") { $_.Value = $false }
-                    if ($_.Value -is [string] -and $_.Value -eq "true") { $_.Value = $true }
-                    $_
-                }
-            )
+            DifferenceObject = $mappedProperties
         }
         $propertiesChanged = @(Compare-Object @splatCompareProperties -PassThru | Where-Object { $_.SideIndicator -eq '=>' })
 
@@ -156,7 +164,7 @@ try {
         $accountPropertiesChanged = @($propertiesChanged | Where-Object { $_.Name -ne 'UsId' })
 
         # Depending on connector configuration, allow changes of the User ID (UsId).
-        if ($actionContext.Configuration.UpdateUserId -and $usIdChange.Count -gt 0 -and $actionContext.AccountCorrelated) {
+        if ($updateUserIdEnabled -and $usIdChange.Count -gt 0 -and $actionContext.AccountCorrelated) {
             $newUsId = [string]($usIdChange | Select-Object -First 1 -ExpandProperty Value)
             $lifecycleActionList += @('UpdateUserId')
         }
@@ -182,6 +190,7 @@ try {
         switch ($action) {
             'UpdateUserId' {
                 Write-Information "Account property(s) required to update: UsId"
+                $previousUsId = $currentUsId
 
                 # Default body for update.
                 $fieldsToUpdate = [ordered]@{
@@ -196,15 +205,18 @@ try {
                     Write-Information "[DryRun] Update AFAS Profit account UsId with accountReference: [$($actionContext.References.Account)], will be executed during enforcement"
                 }
 
+                # If UsId was changed, next actions in this run must target the new UsId.
+                $currentUsId = $newUsId
+                if ($outputContext.Data.PSObject.Properties.Name -contains 'UsId') {
+                    $outputContext.Data.UsId = $newUsId
+                }
+
                 $outputContext.Success = $true
                 $outputContext.AuditLogs.Add([PSCustomObject]@{
-                        Message = "Update account was successful, Account [UsId: $($currentUsId)] updated to [UsId: $($newUsId)]"
+                        Message = "Update account was successful, Account [UsId: $($previousUsId)] updated to [UsId: $($newUsId)]"
                         IsError = $false
                     })
                 break
-
-                # If UsId was changed, next actions in this run must target the new UsId.
-                $currentUsId = $newUsId
             }
 
             'UpdateAccount' {
