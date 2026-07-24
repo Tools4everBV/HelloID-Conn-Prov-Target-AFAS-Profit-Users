@@ -70,7 +70,7 @@ try {
     }
 
     $splatQueryParams = @{
-        Uri             = "$($actionContext.Configuration.BaseUri)/connectors/$($actionContext.Configuration.GetConnector)?filterfieldids=UsId&filtervalues=$([uri]::EscapeDataString($actionContext.References.Account))&operatortypes=1"
+        Uri             = "$($actionContext.Configuration.BaseUri)/connectors/$($actionContext.Configuration.GetConnector)?filterfieldids=BcCo&filtervalues=$([uri]::EscapeDataString($actionContext.References.Account))&operatortypes=1"
         Headers         = $headers
         Method          = 'GET'
         ContentType     = 'application/json;charset=utf-8'

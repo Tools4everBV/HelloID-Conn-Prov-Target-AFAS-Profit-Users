@@ -118,29 +118,23 @@ try {
     }
 
     $splatQueryParams = @{
-        Uri             = "$($actionContext.Configuration.BaseUri)/connectors/$($actionContext.Configuration.GetConnector)?filterfieldids=UsId&filtervalues=$([uri]::EscapeDataString($actionContext.References.Account.UsId))&operatortypes=1"
+        Uri             = "$($actionContext.Configuration.BaseUri)/connectors/$($actionContext.Configuration.GetConnector)?filterfieldids=BcCo&filtervalues=$([uri]::EscapeDataString($actionContext.References.Account))&operatortypes=1"
         Headers         = $headers
         Method          = 'GET'
         ContentType     = 'application/json;charset=utf-8'
         UseBasicParsing = $true
         ErrorAction     = 'Stop'
     }
-    #TODO: replace ($actionContext.References.Account) with ($actionContext.References.Account.UsId) in all files
 
     $correlatedAccount = @((Invoke-RestMethod @splatQueryParams).rows)
-    
-    if ($correlatedAccount.Count -eq 0) {
-        $splatQueryParams.Uri = "$($actionContext.Configuration.BaseUri)/connectors/$($actionContext.Configuration.GetConnector)?filterfieldids=UsId&filtervalues=$([uri]::EscapeDataString($actionContext.References.Account.Medewerker))&operatortypes=2"
 
-        $correlatedAccount = @((Invoke-RestMethod @splatQueryParams).rows)
-    }    
     $lifecycleActionList = @()
     $newUsId = $null
     $currentUsId = $null
     $accountPropertiesChanged = @()
     if ($correlatedAccount.Count -eq 1) {
         $correlatedAccount = $correlatedAccount[0]
-        $outputContext.AccountReference.UsId = [string]$correlatedAccount.UsId
+        $outputContext.AccountReference = [string]$correlatedAccount.BcCo
         $currentUsId = [string]$correlatedAccount.UsId
 
         $outputContext.PreviousData = $correlatedAccount | Select-Object -Property $outputContext.Data.PSObject.Properties.Name
@@ -203,7 +197,6 @@ try {
                 }
 
                 $outputContext.Success = $true
-                $outputContext.AccountReference.UsId = [string]$newUsId
                 $outputContext.AuditLogs.Add([PSCustomObject]@{
                         Message = "Update account was successful, Account [UsId: $($currentUsId)] updated to [UsId: $($newUsId)]"
                         IsError = $false

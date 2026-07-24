@@ -70,6 +70,10 @@ try {
         $dataset = Invoke-RestMethod -Method Get -Uri $uri -Headers $Headers -UseBasicParsing
 
         foreach ($importedAccount in $dataset.rows) {
+            if ([string]::IsNullOrWhiteSpace([string]$importedAccount.BcCo)) {
+                continue
+            }
+
             $data = @{}
 
             foreach ($field in $($actionContext.ImportFields)) {
@@ -88,10 +92,7 @@ try {
 
             # Return the result
             Write-Output @{
-                AccountReference = [PSCustomObject]@{
-                    UsId = [string]$importedAccount.UsId
-                    Medewerker = [string]$importedAccount.Medewerker
-                }
+                AccountReference = [string]$importedAccount.BcCo
                 DisplayName      = $displayName.substring(0, [System.Math]::Min(100, $displayName.Length))
                 UserName         = $importedAccount.UsId
                 Enabled          = $enabled

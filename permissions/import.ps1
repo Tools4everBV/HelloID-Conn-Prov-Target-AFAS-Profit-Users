@@ -91,11 +91,8 @@ try {
             $property = $account.PSObject.Properties[$permission.Reference]
             $permissionValue = if ($null -eq $property) { $null } else { $property.Value }
 
-            if (($permissionValue -eq $true) -and -not [string]::IsNullOrWhiteSpace([string]$account.UsId) -and -not [string]::IsNullOrWhiteSpace([string]$account.Medewerker)) {
-                $null = $memberReferences.Add([PSCustomObject]@{
-                    UsId       = [string]$account.UsId
-                    Medewerker = [string]$account.Medewerker
-                })
+            if (($permissionValue -eq $true) -and -not [string]::IsNullOrWhiteSpace([string]$account.BcCo)) {
+                $null = $memberReferences.Add([string]$account.BcCo)
             }
         }
 
