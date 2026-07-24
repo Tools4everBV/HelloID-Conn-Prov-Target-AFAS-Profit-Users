@@ -75,7 +75,9 @@ function Invoke-AFASUserUpdate {
         $AccountReference
     )
 
-    $FieldsToUpdate['Nm'] = $Name
+    if (-not $FieldsToUpdate.Contains('Nm')) {
+        $FieldsToUpdate['Nm'] = $Name
+    }
 
     $updateAccount = [PSCustomObject]@{
         KnUser = @{

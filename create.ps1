@@ -91,7 +91,7 @@ try {
     }
 
     if ($correlatedAccount.Count -eq 0) {
-        $lifecycleProcess = 'NotFound'
+        $lifecycleProcess = 'CreateAccount'
     }
     elseif ($correlatedAccount.Count -eq 1) {
         $correlatedAccount = $correlatedAccount[0]
@@ -103,6 +103,77 @@ try {
 
     # Process
     switch ($lifecycleProcess) {
+        'CreateAccount' {
+            $newUsId = [string]$actionContext.Data.UsId
+
+            # Build a base payload with permission-related flags managed by the script.
+            $fieldsToCreate = [ordered]@{
+                BcCo = [string]$correlationValue
+                Acon = 'false'
+                Abac = 'false'
+                Acom = 'false'
+                InSi = 'false'
+            }
+
+            # Add/overwrite remaining fields from mapping data.
+            foreach ($property in $actionContext.Data.PSObject.Properties) {
+                if ($property.Name -ne 'UsId') {
+                    $fieldsToCreate[$property.Name] = $property.Value
+                }
+            }
+
+            $createAccount = [PSCustomObject]@{
+                KnUser = @{
+                    Element = @{
+                        '@UsId' = $newUsId
+                        Fields = $fieldsToCreate
+                    }
+                }
+            }
+
+            $body = ($createAccount | ConvertTo-Json -Depth 10)
+            $fieldsInPayload = ($fieldsToCreate.Keys | ForEach-Object { [string]$_ }) -join ', '
+            $splatCreateParams = @{
+                Uri             = "$($actionContext.Configuration.BaseUri)/connectors/$($actionContext.Configuration.UpdateConnector)"
+                Method          = 'POST'
+                Headers         = $authHeader
+                Body            = ([System.Text.Encoding]::UTF8.GetBytes($body))
+                ContentType     = 'application/json;charset=utf-8'
+                UseBasicParsing = $true
+                ErrorAction     = 'Stop'
+            }
+
+            if (-not($actionContext.DryRun -eq $true)) {
+                Write-Information "Creating and correlating AFAS account [$newUsId]. Fields in create payload: [$fieldsInPayload]"
+                $null = Invoke-RestMethod @splatCreateParams -Verbose:$false
+
+                $outputContext.Data = $actionContext.Data | Select-Object -Property $outputContext.Data.PSObject.Properties.Name
+                $outputContext.AccountReference = [PSCustomObject]@{
+                    UsId       = $newUsId
+                    Medewerker = [string]$fieldsToCreate['Medewerker']
+                }
+
+                $auditLogMessage = "Created and correlated AFAS account with accountReference: [$($outputContext.AccountReference)]. Account property(s) set: [$fieldsInPayload]"
+            }
+            else {
+                Write-Information "[DryRun] Create and correlate AFAS account [$newUsId], will be executed during enforcement. Fields in create payload: [$fieldsInPayload]"
+                $outputContext.Data = $actionContext.Data | Select-Object -Property $outputContext.Data.PSObject.Properties.Name
+                $outputContext.AccountReference = [PSCustomObject]@{
+                    UsId       = $newUsId
+                    Medewerker = [string]$fieldsToCreate['Medewerker']
+                }
+                $auditLogMessage = "[DryRun] Would create and correlate AFAS account with accountReference: [$($outputContext.AccountReference)]. Account property(s) to set: [$fieldsInPayload]"
+            }
+
+            $outputContext.success = $true
+            $outputContext.AuditLogs.Add([PSCustomObject]@{
+                    Action  = $lifecycleProcess
+                    Message = $auditLogMessage
+                    IsError = $false
+                })
+            break
+        }
+
         'CorrelateAccount' {
             Write-Information "Correlating AFAS account [$($correlatedAccount.UsId)]"
 
@@ -118,16 +189,6 @@ try {
                     Action  = $lifecycleProcess
                     Message = $auditLogMessage
                     IsError = $false
-                })
-            break
-        }
-        'NotFound' {
-            $auditLogMessage = "No account found where [$($correlationField)] = [$($correlationValue)] while this connector only supports correlation."
-            Write-Information $auditLogMessage
-            $outputContext.Success = $false
-            $outputContext.AuditLogs.Add([PSCustomObject]@{
-                    Message = $auditLogMessage
-                    IsError = $true
                 })
             break
         }
