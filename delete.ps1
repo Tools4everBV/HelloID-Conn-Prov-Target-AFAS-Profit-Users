@@ -116,6 +116,8 @@ try {
                     # Clear email and upn
                     $fieldsToUpdate['EmAd'] = $null
                     $fieldsToUpdate['Upn'] = $null
+                } else {
+                    $fieldsToUpdate['Upn'] = $null
                 }
             }
 
