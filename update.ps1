@@ -207,10 +207,9 @@ try {
 
                 # If UsId was changed, next actions in this run must target the new UsId.
                 $currentUsId = $newUsId
-                if ($outputContext.Data.PSObject.Properties.Name -contains 'UsId') {
-                    $outputContext.Data.UsId = $newUsId
-                }
-
+                $outputContext.Data | Add-Member -MemberType NoteProperty -Name 'UsId' -Value $newUsId -Force
+                
+                $outputContext.Data | Add-Member -MemberType NoteProperty -Name 'BcCo' -Value $correlatedAccount.BcCo -Force
                 $outputContext.Success = $true
                 $outputContext.AuditLogs.Add([PSCustomObject]@{
                         Message = "Update account was successful, Account [UsId: $($previousUsId)] updated to [UsId: $($newUsId)]"
@@ -239,6 +238,13 @@ try {
                     Write-Information "[DryRun] Update AFAS Profit account with accountReference: [$($actionContext.References.Account)], will be executed during enforcement"
                 }
 
+                # Update outputContext.Data with changed values only, leaving unchanged values as-is.
+                foreach ($property in $accountPropertiesChanged) {
+                    if ($property.Name -notin $outputContext.Data.PSObject.Properties.Name) {
+                        $outputContext.Data.$($property.Name) = $property.Value
+                    }
+                }
+                $outputContext.Data | Add-Member -MemberType NoteProperty -Name 'BcCo' -Value $correlatedAccount.BcCo -Force
                 $outputContext.Success = $true
                 $outputContext.AuditLogs.Add([PSCustomObject]@{
                         Message = "Update account was successful, Account property(s) updated: [$($accountPropertiesChanged.Name -join ',')]"
@@ -250,6 +256,7 @@ try {
             'NoChanges' {
                 Write-Information "No changes to AFAS Profit account with accountReference: [$($actionContext.References.Account)]"
 
+                $outputContext.Data | Add-Member -MemberType NoteProperty -Name 'BcCo' -Value $correlatedAccount.BcCo -Force
                 $outputContext.Success = $true
                 $outputContext.AuditLogs.Add([PSCustomObject]@{
                         Message = "Skipped updating AFAS Profit account with accountReference: [$($actionContext.References.Account)]. Reason: No changes."

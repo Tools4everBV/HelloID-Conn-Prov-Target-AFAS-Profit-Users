@@ -111,15 +111,11 @@ try {
             }
 
             # We can only support certain actions during reconciliation.
-            if ($actionContext.Origin -eq 'reconciliation') {                
-                $fieldsToUpdate['Upn'] = $null
+            if ($actionContext.Origin -eq 'reconciliation') {
                 if ($deleteMode -in @('blockKeepGroupsDisableOutSite', 'blockRemoveGroupsDisableOutSite')) {
-                    # Clear email and upn so OutSite can be disabled
+                    # Clear email and upn
                     $fieldsToUpdate['EmAd'] = $null
-                }
-                else {
-                    $upnDomain = $correlatedAccount.EmAd.Split('@')[1]
-                    $fieldsToUpdate['EmAd'] = "$($correlatedAccount.UsId)@$upnDomain"
+                    $fieldsToUpdate['Upn'] = $null
                 }
             }
 

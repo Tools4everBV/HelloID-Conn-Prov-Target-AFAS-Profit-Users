@@ -118,11 +118,10 @@ try {
         'CreateAccount' {
             $newUsId = [string]$actionContext.Data.UsId
 
-            $personNumber = [string]$correlatedAccount.BcCo
-
             # Build a base payload with permission-related flags managed by the script.
             $fieldsToCreate = [ordered]@{
-                BcCo = $personNumber
+                BcCo = [string]$correlatedAccount.BcCo
+                Nm   = [string]$correlatedAccount.Nm
                 Acon = 'false'
                 Abac = 'false'
                 Acom = 'false'
@@ -140,7 +139,7 @@ try {
                 KnUser = @{
                     Element = @{
                         '@UsId' = $newUsId
-                        Fields = $fieldsToCreate
+                        Fields  = $fieldsToCreate
                     }
                 }
             }
@@ -162,7 +161,6 @@ try {
                 $null = Invoke-RestMethod @splatCreateParams -Verbose:$false
 
                 $outputContext.Data = $actionContext.Data | Select-Object -Property $outputContext.Data.PSObject.Properties.Name
-                $outputContext.Data.BcCo = $personNumber
                 $outputContext.AccountReference = [string]$fieldsToCreate['BcCo']
 
                 $auditLogMessage = "Created and correlated AFAS account with accountReference: [$($outputContext.AccountReference)]. Account property(s) set: [$fieldsInPayload]"
@@ -170,14 +168,12 @@ try {
             else {
                 Write-Information "[DryRun] Create and correlate AFAS account [$newUsId], will be executed during enforcement. Fields in create payload: [$fieldsInPayload]"
                 $outputContext.Data = $actionContext.Data | Select-Object -Property $outputContext.Data.PSObject.Properties.Name
-                $outputContext.Data.BcCo = $personNumber
                 $outputContext.AccountReference = [string]$fieldsToCreate['BcCo']
                 $auditLogMessage = "[DryRun] Would create and correlate AFAS account with accountReference: [$($outputContext.AccountReference)]. Account property(s) to set: [$fieldsInPayload]"
             }
 
             $outputContext.success = $true
             $outputContext.AuditLogs.Add([PSCustomObject]@{
-                    Action  = $lifecycleProcess
                     Message = $auditLogMessage
                     IsError = $false
                 })
@@ -190,7 +186,6 @@ try {
 
             $outputContext.Success = $false
             $outputContext.AuditLogs.Add([PSCustomObject]@{
-                    Action  = $lifecycleProcess
                     Message = $auditLogMessage
                     IsError = $true
                 })
@@ -219,7 +214,6 @@ try {
 
             $outputContext.Success = $false
             $outputContext.AuditLogs.Add([PSCustomObject]@{
-                    Action  = $lifecycleProcess
                     Message = $auditLogMessage
                     IsError = $true
                 })

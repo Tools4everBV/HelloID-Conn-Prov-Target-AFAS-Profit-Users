@@ -62,8 +62,8 @@ try {
         @{ DisplayName = 'AFAS Accept'; Reference = 'AcUs' }
     )
 
-    # Filter users where Medewerker en UsId has a value.
-    $filter = 'filterfieldids=Medewerker,UsId&filtervalues=%5Bis%20niet%20leeg%5D&operatortypes=9'
+    # Filter users where EmId (medewerkernummer) en UsId has a value.
+    $filter = 'filterfieldids=EmId,UsId&filtervalues=%5Bis%20niet%20leeg%5D&operatortypes=9'
 
     $base64Token = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes($actionContext.Configuration.Token))
     $headers = @{

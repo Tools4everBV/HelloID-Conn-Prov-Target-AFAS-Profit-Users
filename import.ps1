@@ -54,7 +54,7 @@ try {
     Write-Information 'Starting AFAS Users account entitlement import'
    
     #Filter - Determine what defines an account entitlement, copy from AFAS Connect cURL
-    $Filter = "filterfieldids=Medewerker,UsId&filtervalues=%5Bis%20niet%20leeg%5D&operatortypes=9"
+    $Filter = "filterfieldids=EmId,UsId&filtervalues=%5Bis%20niet%20leeg%5D&operatortypes=9"
 
     Write-Verbose "Starting downloading objects through get-connector [$($actionContext.Configuration.GetConnector)]"
     $encodedToken = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($($actionContext.Configuration.Token)))
@@ -80,11 +80,6 @@ try {
                 $data[$field] = $importedAccount."$field"
             }
 
-            # Enabled in HelloID when account is not blocked and InSite is enabled.
-            $isBlocked = ([string]$importedAccount.Geblokkeerd -eq 'True')
-            $isInSiteEnabled = ([string]$importedAccount.InSi -eq 'True')
-            $enabled = (-not $isBlocked) -and $isInSiteEnabled
-
             $displayName = [string]$importedAccount.Nm
             if ([string]::IsNullOrWhiteSpace($displayName)) {
                 $displayName = [string]$importedAccount.UsId
@@ -95,7 +90,7 @@ try {
                 AccountReference = [string]$importedAccount.BcCo
                 DisplayName      = $displayName.substring(0, [System.Math]::Min(100, $displayName.Length))
                 UserName         = $importedAccount.UsId
-                Enabled          = $enabled
+                Enabled          = ([string]$importedAccount.Bl -eq 'False')
                 Data             = $data
             }
         }

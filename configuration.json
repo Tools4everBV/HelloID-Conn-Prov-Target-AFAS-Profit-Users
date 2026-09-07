@@ -51,7 +51,7 @@
     "templateOptions": {
       "label": "Update User ID after correlation",
       "required": false,
-      "description": "When enabled, the AFAS User ID is updated when it differs from the mapped value. This is only applicable when the account is correlated. Use with care, because changing User ID can affect existing AFAS links and dependencies. Please consult AFAS first. URL: "
+      "description": "When enabled, the AFAS User ID is updated when it differs from the mapped value. This is only applicable when the account is correlated. Use with care, because changing User ID can affect existing AFAS links and dependencies. Please consult AFAS first."
     }
   },
   {
@@ -97,15 +97,15 @@
       "description": "Choose how block status, group memberships, and OutSite are handled during delete.",
       "options": [
         {
-          "label": "OutSite enabled, no block, set email to a dummy value",
+          "label": "OutSite enabled, no block, keep email as is",
           "value": "enableOutSiteNoBlock"
         },
         {
-          "label": "Block user and keep groups, OutSite disabled",
+          "label": "Block user and keep groups, OutSite disabled, clear email and upn",
           "value": "blockKeepGroupsDisableOutSite"
         },
         {
-          "label": "Block user and remove groups, OutSite disabled",
+          "label": "Block user and remove groups, OutSite disabled, clear email and upn",
           "value": "blockRemoveGroupsDisableOutSite"
         }
       ],

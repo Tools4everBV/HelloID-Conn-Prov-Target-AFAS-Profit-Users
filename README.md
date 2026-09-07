@@ -56,7 +56,8 @@
 > [!IMPORTANT]
 > **Profit Windows** is a required field when creating a user. If this field is not mapped, the default value is `true`. Enabling Profit Windows will automatically enable both InSite and Pocket.
 
-#TODO: Concurrent actions moet op 1 gezet worden bij permissiegebruik
+> [!IMPORTANT]
+> When using the permissions of this connector, set the **concurrent actions** of the target system to `1`. The AFAS `KnUser` update connector updates the user as a whole, so two simultaneous mutations on the same user will clash and can overwrite each other's changes.
 
 ## Introduction
 
@@ -102,7 +103,7 @@ https://raw.githubusercontent.com/Tools4everBV/HelloID-Conn-Prov-Target-AFAS-Pro
 
 #### Correlation configuration
 
-The correlation configuration is used to specify which properties will be used to match an existing account within _{connectorName}_ to a person in _HelloID_.
+The correlation configuration is used to specify which properties will be used to match an existing account within _AFAS Profit Users_ to a person in _HelloID_.
 
 To properly setup the correlation:
 
@@ -114,7 +115,7 @@ To properly setup the correlation:
     | ------------------------- | --------------------------------- |
     | Enable correlation        | `True`                            |
     | Person correlation field  | `PersonContext.Person.ExternalId` |
-    | Account correlation field | `Medewerker`                      |
+    | Account correlation field | `EmId`                            |
 
 > [!TIP]
 > _For more information on correlation, please refer to our correlation [documentation](https://docs.helloid.com/en/provisioning/target-systems/powershell-v2-target-systems/correlation.html) pages_.
