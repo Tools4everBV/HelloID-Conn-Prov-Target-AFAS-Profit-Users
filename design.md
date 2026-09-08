@@ -2,227 +2,169 @@
 
 ## Aanleiding
 
-De huidige AFAS User target connector ondersteunt meer dan in de praktijk nodig is. De connector wordt vooral gebruikt om bestaande AFAS-gebruikers te correleren en kernvelden zoals e-mailadres en UPN bij te werken. Echte user-create komt nauwelijks voor, omdat gebruikers meestal al bestaan via OutSite of medewerkerregistratie.
+De huidige AFAS User target connector wordt vooral gebruikt om bestaande AFAS-gebruikers te correleren en velden zoals e-mailadres en UPN bij te werken. In de implementatie is user-create nog optioneel beschikbaar voor het geval een gecorreleerde medewerker nog geen AFAS-user heeft.
 
-Daarnaast is UserId als account reference minder geschikt, omdat deze kan wijzigen. Persoonsnummer is stabieler en sluit beter aan op de relatie tussen medewerker en gebruiker.
+Daarnaast is het belangrijk om correlatie en account reference functioneel te scheiden. Correlatie gebeurt op het Medewerkersnummer (`EmId`). De HelloID account reference is `BcCo`, het medewerkersnummer dat in de AFAS-userrelatie wordt gebruikt. `UsId` blijft de AFAS user identifier en username, maar is niet de HelloID account reference.
 
-De refactor moet de connector vereenvoudigen, maar zonder alle AFAS-autorisaties automatisch als permissions te modelleren. Het onderscheid wordt: accountdata en lifecycle in de account life cycle scripts, zelfstandige autorisaties als permissions.
+Autorisaties in AFAS gaan nu via de account scripts, terwijl het beter zou passen in permissies. Dan is het ook mogelijk om via businessrules verschillende autorisaties uit te delen o.b.v. eigenschappen van de medewerker.
+
+De refactor moet de connector vereenvoudigen, waarbij alle AFAS-autorisaties als permissies worden gemodelleerd en er minder mapping in de scripts plaatsvindt. Het onderscheid wordt: accountdata en lifecycle in de account life cycle scripts, zelfstandige autorisaties als permissions.
 
 ## Doel
 
-De nieuwe connector wordt de standaard voor nieuwe implementaties en herinrichtingen.
+Voorstel: deze nieuwe connector wordt de beoogde standaard voor nieuwe implementaties en herinrichtingen.
 
 Doelen:
 
-* geen echte AFAS user-create meer;
-* Persoonsnummer als account reference;
-* kleinere fieldmapping;
-* duidelijke scheiding tussen data, lifecycle en autorisaties;
-* InSite als vaste lifecycle-logica;
-* OutSite als configureerbaar lifecyclegedrag;
-* blokkeren/deblokkeren als aparte lifecycle-keuze;
-* Profit en overige zelfstandige autorisaties als permissions;
+* bestaande users correleren en user-create optioneel ondersteunen;
+* een heldere correlatie- en account-reference-strategie;
+* duidelijkere fieldmapping;
+* betere scheiding tussen account data en autorisaties;
+* afhankelijkheden tussen Outsite, EmAd en mutatiecodes explicieter documenteren in fieldmapping;
+* configuratie-opties gebruiken voor reconciliation;
+* InSite, Profit en overige zelfstandige autorisaties als permissions;
 * verwijderen van legacy-functionaliteit zoals `only update on correlate`;
-* bestaande connector beschikbaar houden voor legacy-scenario’s.
-
-## Scope
-
-Binnen scope:
-
-* create vervangen door correlate only;
-* account reference wijzigen naar Persoonsnummer;
-* fieldmapping beperken tot relevante accountvelden;
-* lifecyclegedrag vastleggen per actie;
-* OutSite en blokkeren configureerbaar maken;
-* permission imports toevoegen voor zelfstandige autorisaties;
 * target GET-connector(s) aanpassen;
-* `only update on correlate` verwijderen.
 * scripts herschrijven volgens laatste conventie
 
 Buiten scope:
 
 * refactor van de AFAS Medewerker connector;
 * herontwerp van bestaande AFAS source connectors;
-* automatische migratie van bestaande klantinrichtingen.
+* OAuth als autorisatiemethode;
+* mTLS met certificaat;
+* migratie van bestaande klantinrichtingen.
 
 ## Ontwerpkeuzes
 
-### 1. Geen echte user-create
+### 1. Correlatie en optionele user-create
 
-Create maakt geen AFAS-gebruiker meer aan. De actie correleert een bestaande gebruiker, legt de account reference vast en schrijft de relevante startwaarden.
+Create zoekt op `EmId` en vereist daarbij een niet-lege `BcCo`. Als de gevonden medewerker al een `UsId` heeft, wordt de bestaande AFAS-user gecorreleerd. De actie legt `BcCo` vast als HelloID account reference en neemt de gemapte startwaarden over.
 
-Klanten die echte user-create gebruiken blijven op de bestaande connector of worden apart beoordeeld.
+Als de gevonden medewerker geen `UsId` heeft, kan de connector afhankelijk van de configuratieoptie `CreateUser` een nieuwe AFAS-user aanmaken. Staat deze optie uit, dan faalt de actie gecontroleerd. Als er geen medewerker wordt gevonden of meerdere medewerkers worden gevonden, faalt de correlatie.
 
-### 2. Persoonsnummer als account reference
+### 2. Correlatie en account references
 
-De account reference wordt Persoonsnummer in plaats van UserId.
+In dit voorstel geldt:
 
-Motivatie:
+* correlatie op `EmId`, het Medewerkersnummer;
+* primaire HelloID account reference op `BcCo`;
+* `UsId` als AFAS user identifier en username.
 
-* stabieler dan UserId;
-* logischer bij koppeling met medewerker;
-* minder gevoelig voor wijzigende gebruikersnamen of technische IDs.
+Vervolgacties zoeken de account op `BcCo`. Er is momenteel geen fallback op `UsId`, geen validatie van een opgeslagen `EmId` en geen configureerbare hercorrelatie als `BcCo` niet wordt gevonden.
 
-Bij migratie moeten bestaande correlaties gecontroleerd worden.
+Met de optie `UpdateUserId` kan `UsId` tijdens een update na correlatie eenmalig worden gewijzigd. Dit gebeurt met de AFAS-mutatiecode 4 en alleen wanneer het account in die actie is gecorreleerd. De HelloID account reference blijft daarbij `BcCo`.
 
 ### 3. Fieldmapping
 
-Fieldmapping wordt gebruikt voor accountdata in update en delete, met een kleine set velden.
+Nieuwe fieldmapping:
 
-Actuele fieldmapping:
+| Veld | Acties                  | Doel                                                                       |
+|------|-------------------------|----------------------------------------------------------------------------|
+| EmId | Create                  | Correlatie op Medewerkersnummer                                            |
+| EmAd | Create, Update, Delete  | Zakelijk e-mailadres tijdens dienstverband en eindstaat                    |
+| Upn  | Create, Update, Delete  | Loginnaam / UPN tijdens dienstverband en eindstaat                         |
+| UsId | Create, Update          | AFAS user identifier; update alleen wanneer `UpdateUserId` is ingeschakeld |
+| BcCo | Create, Update          | HelloID account reference; scriptmatig gevuld vanuit AFAS                  |
+| Site | Enable, Disable, Delete | OutSite lifecyclegedrag                                                    |
+| MtCd | Enable, Disable, Delete | Mutatiecode voor blokkeren/deblokkeren en groepsgedrag                     |
 
-| Veld           | Acties         | Doel                                                    |
-| -------------- | -------------- | ------------------------------------------------------- |
-| Persoonsnummer | Update         | Account reference                                       |
-| Medewerker     | Create         | Correlatie                                              |
-| EmAd           | Update, Delete | Zakelijk e-mailadres tijdens dienstverband en opschonen |
-| Upn            | Update, Delete | Loginnaam / UPN tijdens dienstverband en opschonen      |
-| UsId           | Update         | Alleen technisch indien Update User ID is ingeschakeld  |
-
-`Nm` staat niet in de fieldmapping, maar wordt in update-, enable-, disable-, delete- en permission-calls verplicht scriptmatig meegestuurd omdat AFAS dit veld vereist in de update payload.
+`Nm` staat niet in de fieldmapping, maar wordt in update-, enable-, disable-, delete- en permission-calls verplicht scriptmatig meegestuurd omdat AFAS dit veld vereist in de update payload, maar er verder niets mee wordt gedaan. Dus een update van het veld is niet mogelijk.
 
 ### 4. Verwijderen `only update on correlate`
 
-De legacy-optie `only update on correlate` wordt niet meegenomen.
+De legacy-optie `only update on correlate` wordt in dit voorstel verwijderd.
 
-Deze optie past niet bij het nieuwe model. Create/correlate zet de initiële waarden, update houdt kernvelden actueel en delete zet waarden terug of schoont ze op.
-
-Als bijvoorbeeld de UPN in AD wijzigt, moet deze wijziging ook naar AFAS worden doorgeschreven. De update-actie mag dit niet overslaan omdat het account al eerder is gecorreleerd.
+Deze optie past niet bij de huidige werkwijze.
 
 ## Lifecycle per actie
-
-HelloID kent een vaste volgorde. Bij indienst loopt create vóór enable. Bij uitdienst loopt disable vóór delete. Permissions worden beheerd via grant/revoke scripts en zitten na create en vóór delete in de lifecycle.
 
 ### Create / correlate
 
 Verantwoordelijk voor koppeling en startdata:
 
+* medewerker zoeken op `EmId` en controleren op een niet-lege `BcCo`;
 * bestaande AFAS-user zoeken en correleren;
-* ARef zetten op Persoonsnummer.
+* optioneel een AFAS-user aanmaken als `CreateUser` is ingeschakeld en `UsId` ontbreekt;
+* `BcCo` als HelloID account reference teruggeven;
+* gemapte startwaarden schrijven bij correlatie of create.
 
-Geen lifecycle- of permissionlogica.
+Geen aparte permissionlogica.
 
 ### Enable
 
 Verantwoordelijk voor de actieve lifecycle-stand:
 
-* deblokkeren indien geconfigureerd;
-* InSite aanzetten;
-* OutSite toepassen volgens indienstconfiguratie.
-
-Geen EmAd/UPN/Nm-mutaties.
+* deblokkeren in combinatie met de gemapte `MtCd`;
+* `Site` toepassen via fieldmapping;
+* optionele `EmAd`/`Upn`-mutaties via fieldmapping.
 
 ### Update
 
 Verantwoordelijk voor datamutaties tijdens dienstverband:
 
-* EmAd;
-* Upn;
-* optioneel UsId (alleen bij ingeschakelde configuratieoptie `UpdateUserId`).
+* `EmAd`;
+* `Upn`;
+* optioneel `UsId` bij een update na correlatie wanneer `UpdateUserId` is ingeschakeld.
 
 Geen lifecycle- of permissionlogica.
+
+Vervolgacties zoeken primair op de HelloID account reference `BcCo`. Wanneer het account niet wordt gevonden, faalt de update; er is geen fallback-hercorrelatie.
 
 ### Disable
 
 Verantwoordelijk voor de niet-actieve lifecycle-stand en daarmee de tegenhanger van enable:
 
-* InSite uitzetten;
-* Profit Windows uitzetten als deze nog actief is;
-* OutSite toepassen volgens uitdienstconfiguratie;
-* blokkeren indien geconfigureerd.
+* `Site` toepassen via fieldmapping;
+* blokkeren en groepsgedrag toepassen via fieldmapping (`MtCd`);
+* optionele `EmAd`/`Upn`-mutaties via fieldmapping.
 
-Disable ondersteunt reconciliation voor alle `DisableDeleteMode`-waarden zonder extra uitzonderingslogica. In disable worden alleen lifecyclevelden aangepast (zoals InSi, Awin, Site en MtCd), geen Upn/EmAd.
+Voor reconciliationgedrag, zie verderop.
 
 ### Delete / uncorrelate
 
 Verantwoordelijk voor de definitieve post-employment eindstaat:
 
-* EmAd/UPN volgens delete-fieldmapping;
-* InSite idempotent uitzetten;
-* OutSite idempotent toepassen volgens uitdienstconfiguratie;
-* blokkering idempotent toepassen volgens configuratie;
-* uncorrelate.
+* `EmAd`/`Upn` volgens de delete-fieldmapping toepassen;
+* `Site` toepassen via fieldmapping;
+* blokkeren en groepsgedrag toepassen via fieldmapping (`MtCd`);
+* de account als verwijderd afhandelen in HelloID.
 
-Delete herhaalt bewust lifecycle-mutaties om de eindstaat te borgen. Reconciliationgedrag voor delete blijft apart beoordeeld ten opzichte van disable.
+Voor reconciliationgedrag, zie verderop.
 
-## Configuratiemodel
+## Reconciliation
 
-De connector gebruikt twee dropdowns in plaats van gecombineerde toggles.
+In dit voorstel gebruikt de connector-configuratie twee dropdowns ter ondersteuning van reconciliation.
 
-### Gedrag bij enable (`EnableOutSiteMode`)
+### Reconciliationgedrag bij disable (`DisableMode`)
 
-| Waarde           | Betekenis                    |
-| ---------------- | ---------------------------- |
-| `disableOutSite` | OutSite expliciet uitzetten  |
-| `ignoreOutSite`  | OutSite niet aanpassen       |
-| `enableOutSite`  | OutSite expliciet aanzetten  |
+| Waarde                            | Betekenis                                      |
+|-----------------------------------|------------------------------------------------|
+| `enableOutSiteNoBlock`            | OutSite aan, niet blokkeren                    |
+| `blockKeepGroupsDisableOutSite`   | OutSite uit, blokkeren met groepen behouden    |
+| `blockRemoveGroupsDisableOutSite` | OutSite uit, blokkeren met groepen verwijderen |
 
-Enable zet daarnaast altijd InSite aan en deblokkeert de gebruiker.
+### Reconciliationgedrag bij delete (`DeleteMode`)
 
-### Gedrag bij disable en delete (`DisableDeleteMode`)
+| Waarde                            | Betekenis                                                    |
+|-----------------------------------|--------------------------------------------------------------|
+| `enableOutSiteNoBlock`            | OutSite aan, `Upn` wissen en `EmAd` behouden, niet blokkeren |
+| `blockKeepGroupsDisableOutSite`   | OutSite uit, blokkeren met groepen behouden                  |
+| `blockRemoveGroupsDisableOutSite` | OutSite uit, blokkeren met groepen verwijderen               |
 
-| Waarde                            | Betekenis                                                            |
-| --------------------------------- | -------------------------------------------------------------------- |
-| `enableOutSiteNoBlock`            | OutSite aan, niet blokkeren                                          |
-| `blockKeepGroupsDisableOutSite`   | OutSite uit, blokkeren met groepen behouden                          |
-| `blockRemoveGroupsDisableOutSite` | OutSite uit, blokkeren met groepen verwijderen (AFAS entrycode `0`) |
-
-## InSite
-
-InSite wordt vaste lifecycle-logica. Er is geen bekend scenario waarin een gebruiker tijdens dienstverband géén InSite moet hebben. Zonder InSite heeft de AFAS User connector functioneel weinig waarde.
-
-| Actie   | InSite          |
-| ------- | --------------- |
-| Enable  | Aan             |
-| Disable | Uit             |
-| Delete  | Uit, idempotent |
-
-InSite wordt geen permission en geen klantconfigureerbare fieldmapping.
-
-## OutSite
-
-OutSite is lifecycle-afhankelijk en wordt niet als permission gemodelleerd.
-
-| Actie   | Sturing                                                     |
-| ------- | ----------------------------------------------------------- |
-| Enable  | via `EnableOutSiteMode` (`disableOutSite`, `ignoreOutSite`, `enableOutSite`) |
-| Disable | via `DisableDeleteMode` (`enableOutSiteNoBlock` of blokvarianten met OutSite uit) |
-| Delete  | via `DisableDeleteMode` (zelfde keuzes als disable)         |
-
-Timing van enable/disable/delete blijft in HelloID gestuurd via lifecycle en eventuele offsets, niet in deze connectorlogica.
-
-## Blokkeren/deblokkeren
-
-Blokkeren/deblokkeren is onderdeel van lifecycle:
-
-| Actie   | Gedrag                                                                 |
-| ------- | ---------------------------------------------------------------------- |
-| Enable  | Altijd deblokkeren (AFAS entrycode `6`)                                |
-| Disable | `enableOutSiteNoBlock`: niet blokkeren; block-varianten: wel blokkeren |
-| Delete  | `enableOutSiteNoBlock`: niet blokkeren; block-varianten: wel blokkeren |
-
-Voor block-varianten worden in de implementatie twee codes gebruikt:
-
-* groepen behouden: `MtCd = 2`;
-* groepen verwijderen: `MtCd = 0`.
-
-Combinaties met OutSite aan en blokkeren worden niet gebruikt in het huidige model.
+Deze instellingen zijn sturing voor reconciliation, waar geen fieldmappingdata beschikbaar is.
 
 ## Permissions
 
-Alleen zelfstandige autorisaties worden permissions:
+In dit voorstel worden zelfstandige autorisaties als permissions gemodelleerd:
 
-* `Awin` - Profit;
+* `InSi` - InSite access (beschikbaar voor permission grant/revoke);
+* `Awin` - Profit Windows access;
 * `OcUs` - Activate collaboration license;
 * `PoMa` - AFAS Online Portal administrator;
 * `AcUs` - AFAS Accept.
 
-InSite en OutSite worden niet als permissions geïmporteerd.
+De permission-import levert alle vijf bovenstaande permissions aan.
 
-## Advies
-
-Introduceer een nieuwe AFAS User target connector voor nieuwe implementaties en herinrichtingen. Gebruik Persoonsnummer als account reference, verwijder echte user-create en houd enable/disable smal.
-
-Beheer accountdata via update/delete, lifecycle via enable/disable/delete en zelfstandige autorisaties via permissions. Enable en disable vormen elkaars tegenhangers; delete borgt de post-employment eindstaat idempotent en verwerkt delete-opschoning van Upn en EmAd.
-
-Verwijder `only update on correlate`, zodat wijzigingen in kernvelden zoals UPN en e-mailadres ook na initiële correlatie naar AFAS worden doorgevoerd.
+Omdat AFAS afhankelijkheden kent rond InSite/Profit Windows, wordt de bestaande randvoorwaarde expliciet meegenomen: bij revoke van InSite wordt indien nodig ook `Awin` uitgezet zodat de wijziging technisch afdwingbaar blijft.
+OutSite wordt niet als permission beheerd, maar via de fieldmapping.

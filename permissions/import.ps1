@@ -56,9 +56,10 @@ try {
     Write-Information 'Starting AFAS Profit permission entitlement import'
 
     $permissionsToImport = @(
-        @{ DisplayName = 'Profit Windows access'; Reference = 'Awin' }
-        @{ DisplayName = 'Activate collaboration license'; Reference = 'OcUs' }
-        @{ DisplayName = 'AFAS Online Portal administrator'; Reference = 'PoMa' }
+        @{ DisplayName = 'InSite access'; Reference = 'InSi' },
+        @{ DisplayName = 'Profit Windows access'; Reference = 'Awin' },
+        @{ DisplayName = 'Activate collaboration license'; Reference = 'OcUs' },
+        @{ DisplayName = 'AFAS Online Portal administrator'; Reference = 'PoMa' },
         @{ DisplayName = 'AFAS Accept'; Reference = 'AcUs' }
     )
 
