@@ -1,4 +1,4 @@
-﻿##################################################
+##################################################
 # HelloID-Conn-Prov-Target-AFAS-Profit-Users-Delete
 # PowerShell V2
 ##################################################
@@ -11,7 +11,7 @@
 [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor [System.Net.SecurityProtocolType]::Tls12
 
 #region functions
-function Resolve-AFAS-ProfitError {
+function Resolve-AFASProfitError {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory)]
@@ -39,6 +39,7 @@ function Resolve-AFAS-ProfitError {
         try {
             $errorDetailsObject = ($httpErrorObj.ErrorDetails | ConvertFrom-Json)
 
+            # 16 - AFAS returns the readable error in [externalMessage].
             if ($null -ne $errorDetailsObject.externalMessage) {
                 $httpErrorObj.FriendlyMessage = $errorDetailsObject.externalMessage
             }
@@ -48,6 +49,7 @@ function Resolve-AFAS-ProfitError {
         }
         catch {
             $httpErrorObj.FriendlyMessage = "[$($httpErrorObj.ErrorDetails)]"
+            Write-Warning $_.Exception.Message
         }
         Write-Output $httpErrorObj
     }
@@ -153,7 +155,8 @@ try {
             }
 
             $body = ($updateAccount | ConvertTo-Json -Depth 10)
-            $fieldsInPayload = ($actionContext.Data.PSObject.Properties.Name | ForEach-Object { [string]$_ }) -join ', '
+            # 14 - During reconciliation the payload comes from [DeleteMode], not from the mapping.
+            $fieldsInPayload = ($fieldsToUpdate.Keys | ForEach-Object { [string]$_ }) -join ', '
             $splatUpdateParams = @{
                 Uri             = "$($actionContext.Configuration.BaseUri)/connectors/$($actionContext.Configuration.UpdateConnector)"
                 Headers         = $headers
@@ -198,12 +201,12 @@ catch {
     $ex = $PSItem
     if ($($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or
         $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
-        $errorObj = Resolve-AFAS-ProfitError -ErrorObject $ex
+        $errorObj = Resolve-AFASProfitError -ErrorObject $ex
         $auditLogMessage = "Could not delete AFAS Profit account: [$($actionContext.References.Account)]. Error: $($errorObj.FriendlyMessage). Action initiated by: [$($actionContext.Origin)]"
         Write-Warning "Error at Line '$($errorObj.ScriptLineNumber)': $($errorObj.Line). Error: $($errorObj.ErrorDetails)"
     }
     else {
-        $auditLogMessage = "Could not delete AFAS Profit account: [$($actionContext.References.Account)]. Error: $($_.Exception.Message). Action initiated by: [$($actionContext.Origin)]"
+        $auditLogMessage = "Could not delete AFAS Profit account: [$($actionContext.References.Account)]. Error: $($ex.Exception.Message). Action initiated by: [$($actionContext.Origin)]"
         Write-Warning "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($ex.Exception.Message)"
     }
     $outputContext.AuditLogs.Add([PSCustomObject]@{

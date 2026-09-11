@@ -1,4 +1,4 @@
-﻿#################################################
+#################################################
 # HelloID-Conn-Prov-Target-AFAS-Profit-Users-Create
 # PowerShell V2
 #################################################
@@ -7,7 +7,7 @@
 [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor [System.Net.SecurityProtocolType]::Tls12
 
 #region functions
-function Resolve-AFAS-ProfitError {
+function Resolve-AFASProfitError {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory)]
@@ -35,6 +35,7 @@ function Resolve-AFAS-ProfitError {
         try {
             $errorDetailsObject = ($httpErrorObj.ErrorDetails | ConvertFrom-Json)
 
+            # 16 - AFAS returns the readable error in [externalMessage].
             if ($null -ne $errorDetailsObject.externalMessage) {
                 $httpErrorObj.FriendlyMessage = $errorDetailsObject.externalMessage
             }
@@ -44,6 +45,7 @@ function Resolve-AFAS-ProfitError {
         }
         catch {
             $httpErrorObj.FriendlyMessage = "[$($httpErrorObj.ErrorDetails)]"
+            Write-Warning $_.Exception.Message
         }
         Write-Output $httpErrorObj
     }
@@ -72,6 +74,12 @@ try {
         }
         if ([string]::IsNullOrEmpty($($correlationValue))) {
             throw 'Correlation is enabled but [accountFieldValue] is empty. Please make sure it is correctly mapped'
+        }
+
+        # 6 - AFAS splits [filtervalues] on the comma. A comma in the value silently shifts all following
+        # filter values, which returns a wrong match instead of an error. EscapeDataString does not cover this.
+        if ($correlationValue -match ',') {
+            throw "Correlation value [$correlationValue] contains a comma. This character is the AFAS filter separator and cannot be used in [filtervalues]"
         }
 
         # Determine if a user needs to be [created] or [correlated]
@@ -118,19 +126,29 @@ try {
         'CreateAccount' {
             $newUsId = [string]$actionContext.Data.UsId
 
+            # 8 - Nm is the user description. A Medewerker without UsId has no description yet, while AFAS requires it.
+            $userDescription = [string]$correlatedAccount.Nm
+            if ([string]::IsNullOrWhiteSpace($userDescription)) {
+                $userDescription = $newUsId
+            }
+
             # Build a base payload with permission-related flags managed by the script.
             $fieldsToCreate = [ordered]@{
                 BcCo = [string]$correlatedAccount.BcCo
-                Nm   = [string]$correlatedAccount.Nm
+                Nm   = $userDescription
                 Acon = 'false'
                 Abac = 'false'
                 Acom = 'false'
                 InSi = 'false'
             }
 
+            # 7 - UsId is sent as element key and EmId is a GetConnector correlation field only.
+            # Both are not valid KnUser fields and are rejected by AFAS when present in the payload.
+            $fieldsToExcludeFromPayload = @('UsId', 'EmId')
+
             # Add/overwrite remaining fields from mapping data.
             foreach ($property in $actionContext.Data.PSObject.Properties) {
-                if ($property.Name -ne 'UsId') {
+                if ($property.Name -notin $fieldsToExcludeFromPayload) {
                     $fieldsToCreate[$property.Name] = $property.Value
                 }
             }
@@ -174,6 +192,7 @@ try {
 
             $outputContext.success = $true
             $outputContext.AuditLogs.Add([PSCustomObject]@{
+                    Action  = 'CreateAccount'
                     Message = $auditLogMessage
                     IsError = $false
                 })
@@ -186,6 +205,7 @@ try {
 
             $outputContext.Success = $false
             $outputContext.AuditLogs.Add([PSCustomObject]@{
+                    Action  = 'CorrelateAccount'
                     Message = $auditLogMessage
                     IsError = $true
                 })
@@ -201,7 +221,7 @@ try {
             $outputContext.success = $true
             $auditLogMessage = "Correlated account: [$($outputContext.AccountReference)] on field: [$($correlationField)] with value: [$($correlationValue)]"
             $outputContext.AuditLogs.Add([PSCustomObject]@{
-                    Action  = $lifecycleProcess
+                    Action  = 'CorrelateAccount'
                     Message = $auditLogMessage
                     IsError = $false
                 })
@@ -214,6 +234,7 @@ try {
 
             $outputContext.Success = $false
             $outputContext.AuditLogs.Add([PSCustomObject]@{
+                    Action  = 'CreateAccount'
                     Message = $auditLogMessage
                     IsError = $true
                 })
@@ -226,7 +247,7 @@ catch {
     $ex = $PSItem
     if ($($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or
         $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
-        $errorObj = Resolve-AFAS-ProfitError -ErrorObject $ex
+        $errorObj = Resolve-AFASProfitError -ErrorObject $ex
         $auditLogMessage = "Could not create or correlate AFAS-Profit account: [$($actionContext.References.Account)]. Error: $($errorObj.FriendlyMessage)"
         Write-Warning "Error at Line '$($errorObj.ScriptLineNumber)': $($errorObj.Line). Error: $($errorObj.ErrorDetails)"
     }

@@ -1,4 +1,4 @@
-﻿#################################################
+#################################################
 # HelloID-Conn-Prov-Target-AFAS-Profit-Users-Enable
 # PowerShell V2
 #################################################
@@ -11,7 +11,7 @@
 [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor [System.Net.SecurityProtocolType]::Tls12
 
 #region functions
-function Resolve-AFAS-ProfitError {
+function Resolve-AFASProfitError {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory)]
@@ -39,6 +39,7 @@ function Resolve-AFAS-ProfitError {
         try {
             $errorDetailsObject = ($httpErrorObj.ErrorDetails | ConvertFrom-Json)
 
+            # 16 - AFAS returns the readable error in [externalMessage].
             if ($null -ne $errorDetailsObject.externalMessage) {
                 $httpErrorObj.FriendlyMessage = $errorDetailsObject.externalMessage
             }
@@ -48,6 +49,7 @@ function Resolve-AFAS-ProfitError {
         }
         catch {
             $httpErrorObj.FriendlyMessage = "[$($httpErrorObj.ErrorDetails)]"
+            Write-Warning $_.Exception.Message
         }
         Write-Output $httpErrorObj
     }
@@ -113,7 +115,8 @@ try {
             }
 
             $body = ($updateAccount | ConvertTo-Json -Depth 10)
-            $fieldsInPayload = ($actionContext.Data.PSObject.Properties.Name | ForEach-Object { [string]$_ }) -join ', '
+            # 14 - Log the fields that are actually sent instead of the mapped fields.
+            $fieldsInPayload = ($fieldsToUpdate.Keys | ForEach-Object { [string]$_ }) -join ', '
             $splatUpdateParams = @{
                 Uri             = "$($actionContext.Configuration.BaseUri)/connectors/$($actionContext.Configuration.UpdateConnector)"
                 Headers         = $headers
@@ -125,13 +128,13 @@ try {
             }
 
             if (-not($actionContext.DryRun -eq $true)) {
-                 Write-Information "Enabling AFAS Profit account with accountReference: [$($actionContext.References.Account)]. Fields in update: [$fieldsInPayload]"
+                Write-Information "Enabling AFAS Profit account with accountReference: [$($actionContext.References.Account)]. Fields in update: [$fieldsInPayload]"
                 $null = Invoke-RestMethod @splatUpdateParams -Verbose:$false
-                  $auditLogMessage = "Enabled AFAS Profit account with accountReference: [$($actionContext.References.Account)]. Account property(s) updated: [$fieldsInPayload]"
+                $auditLogMessage = "Enabled AFAS Profit account with accountReference: [$($actionContext.References.Account)]. Account property(s) updated: [$fieldsInPayload]"
             }
             else {
-                  Write-Information "[DryRun] Enable AFAS Profit account with accountReference: [$($actionContext.References.Account)], will be executed during enforcement. Fields in update: [$fieldsInPayload]"
-                  $auditLogMessage = "[DryRun] Would enable AFAS Profit account with accountReference: [$($actionContext.References.Account)]. Account property(s) to update: [$fieldsInPayload]"
+                Write-Information "[DryRun] Enable AFAS Profit account with accountReference: [$($actionContext.References.Account)], will be executed during enforcement. Fields in update: [$fieldsInPayload]"
+                $auditLogMessage = "[DryRun] Would enable AFAS Profit account with accountReference: [$($actionContext.References.Account)]. Account property(s) to update: [$fieldsInPayload]"
             }
 
             $outputContext.Success = $true
@@ -160,7 +163,7 @@ catch {
 
     if ($($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or
         $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
-        $errorObj = Resolve-AFAS-ProfitError -ErrorObject $ex
+        $errorObj = Resolve-AFASProfitError -ErrorObject $ex
         $auditLogMessage = "Could not enable AFAS-Profit account: [$($actionContext.References.Account)]. Error: $($errorObj.FriendlyMessage)"
         Write-Warning "Error at Line '$($errorObj.ScriptLineNumber)': $($errorObj.Line). Error: $($errorObj.ErrorDetails)"
     }

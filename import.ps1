@@ -1,4 +1,4 @@
-﻿#################################################
+#################################################
 # HelloID-Conn-Prov-Target-AFAS-Profit-Users-Import
 # PowerShell V2
 #################################################
@@ -7,7 +7,7 @@
 [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor [System.Net.SecurityProtocolType]::Tls12
 
 #region functions
-function Resolve-AFAS-ProfitError {
+function Resolve-AFASProfitError {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory)]
@@ -35,6 +35,7 @@ function Resolve-AFAS-ProfitError {
         try {
             $errorDetailsObject = ($httpErrorObj.ErrorDetails | ConvertFrom-Json)
 
+            # 16 - AFAS returns the readable error in [externalMessage].
             if ($null -ne $errorDetailsObject.externalMessage) {
                 $httpErrorObj.FriendlyMessage = $errorDetailsObject.externalMessage
             }
@@ -44,6 +45,7 @@ function Resolve-AFAS-ProfitError {
         }
         catch {
             $httpErrorObj.FriendlyMessage = "[$($httpErrorObj.ErrorDetails)]"
+            Write-Warning $_.Exception.Message
         }
         Write-Output $httpErrorObj
     }
@@ -51,12 +53,11 @@ function Resolve-AFAS-ProfitError {
 #endregion functions
 
 try {
-    Write-Information 'Starting AFAS Users account entitlement import'
-   
     #Filter - Determine what defines an account entitlement, copy from AFAS Connect cURL
     $Filter = "filterfieldids=EmId,UsId&filtervalues=%5Bis%20niet%20leeg%5D&operatortypes=9"
 
-    Write-Verbose "Starting downloading objects through get-connector [$($actionContext.Configuration.GetConnector)]"
+    Write-Information "Starting AFAS Users account entitlement import through get-connector [$($actionContext.Configuration.GetConnector)]"
+
     $encodedToken = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($($actionContext.Configuration.Token)))
     $authValue = "AfasToken $encodedToken"
     $Headers = @{ Authorization = $authValue }
@@ -64,14 +65,24 @@ try {
 
     $take = 1000
     $skip = 0
+    $downloadedRecordCount = 0
+
+    # 18 - BcCo is the account reference. Track it to detect persons with more than one AFAS user.
+    $processedAccountReferences = [System.Collections.Generic.HashSet[string]]::new()
 
     do {
-        $uri = $($actionContext.Configuration.BaseUri) + "/connectors/" + $($actionContext.Configuration.GetConnector) + "?$Filter&skip=$skip&take=$take&orderbyfieldids=UsId"
+        $uri = "$($actionContext.Configuration.BaseUri)/connectors/$($actionContext.Configuration.GetConnector)?$Filter&skip=$skip&take=$take&orderbyfieldids=UsId"
         $dataset = Invoke-RestMethod -Method Get -Uri $uri -Headers $Headers -UseBasicParsing
+        $downloadedRecordCount += @($dataset.rows).Count
 
         foreach ($importedAccount in $dataset.rows) {
             if ([string]::IsNullOrWhiteSpace([string]$importedAccount.BcCo)) {
                 continue
+            }
+
+            # 18 - Log duplicates so they can be cleaned up in AFAS, but still return them and let HelloID handle it.
+            if (-not $processedAccountReferences.Add([string]$importedAccount.BcCo)) {
+                Write-Warning "AFAS user [$($importedAccount.UsId)] has person number [$($importedAccount.BcCo)], which is already used as account reference by another user. A person number must resolve to a single AFAS user."
             }
 
             $data = @{}
@@ -90,7 +101,8 @@ try {
                 AccountReference = [string]$importedAccount.BcCo
                 DisplayName      = $displayName.substring(0, [System.Math]::Min(100, $displayName.Length))
                 UserName         = $importedAccount.UsId
-                Enabled          = ([string]$importedAccount.Bl -eq 'False')
+                # 9 - Bl is a boolean in the GetConnector, so evaluate it as one instead of via a string compare.
+                Enabled          = (-not [bool]$importedAccount.Bl)
                 Data             = $data
             }
         }
@@ -98,15 +110,13 @@ try {
         $skip += $take
     } while (@($dataset.rows).count -eq $take)
 
-    Write-Verbose "Downloaded records through get-connector [$($actionContext.Configuration.GetConnector)]"
-    
-    Write-Information 'AFAS Users account entitlement import completed'
+    Write-Information "AFAS Users account entitlement import completed. Downloaded [$downloadedRecordCount] records through get-connector [$($actionContext.Configuration.GetConnector)]"
 }
 catch {
     $ex = $PSItem
     if ($($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or
         $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
-        $errorObj = Resolve-AFAS-ProfitError -ErrorObject $ex
+        $errorObj = Resolve-AFASProfitError -ErrorObject $ex
         Write-Warning "Error at Line '$($errorObj.ScriptLineNumber)': $($errorObj.Line). Error: $($errorObj.ErrorDetails)"
         Write-Error "Could not import AFAS Users account entitlements. Error: $($errorObj.FriendlyMessage)"
     }

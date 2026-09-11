@@ -1,4 +1,4 @@
-﻿#################################################################
+#################################################################
 # HelloID-Conn-Prov-Target-AFAS-Profit-Users-RevokePermission
 # PowerShell V2
 #################################################################
@@ -11,7 +11,7 @@
 [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor [System.Net.SecurityProtocolType]::Tls12
 
 #region functions
-function Resolve-AFAS-ProfitError {
+function Resolve-AFASProfitError {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory)]
@@ -37,18 +37,19 @@ function Resolve-AFAS-ProfitError {
             }
         }
         try {
-            $parsedError = ($httpErrorObj.ErrorDetails | ConvertFrom-Json)
-            $externalMessageProperty = $parsedError.PSObject.Properties['externalMessage']
+            $errorDetailsObject = ($httpErrorObj.ErrorDetails | ConvertFrom-Json)
 
-            if ($null -ne $externalMessageProperty -and -not [string]::IsNullOrWhiteSpace([string]$externalMessageProperty.Value)) {
-                $httpErrorObj.FriendlyMessage = $externalMessageProperty.Value
+            # 16 - AFAS returns the readable error in [externalMessage].
+            if ($null -ne $errorDetailsObject.externalMessage) {
+                $httpErrorObj.FriendlyMessage = $errorDetailsObject.externalMessage
             }
             else {
-                $httpErrorObj.FriendlyMessage = $parsedError
+                $httpErrorObj.FriendlyMessage = $errorDetailsObject
             }
         }
         catch {
             $httpErrorObj.FriendlyMessage = "[$($httpErrorObj.ErrorDetails)]"
+            Write-Warning $_.Exception.Message
         }
         Write-Output $httpErrorObj
     }
@@ -189,12 +190,12 @@ catch {
     $ex = $PSItem
     if ($($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or
         $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
-        $errorObj = Resolve-AFAS-ProfitError -ErrorObject $ex
+        $errorObj = Resolve-AFASProfitError -ErrorObject $ex
         $auditLogMessage = "Could not revoke AFAS Profit permission for account: [$($actionContext.References.Account)]. Error: $($errorObj.FriendlyMessage). Action initiated by: [$($actionContext.Origin)]"
         Write-Warning "Error at Line '$($errorObj.ScriptLineNumber)': $($errorObj.Line). Error: $($errorObj.ErrorDetails)"
     }
     else {
-        $auditLogMessage = "Could not revoke AFAS Profit permission for account: [$($actionContext.References.Account)]. Error: $($_.Exception.Message). Action initiated by: [$($actionContext.Origin)]"
+        $auditLogMessage = "Could not revoke AFAS Profit permission for account: [$($actionContext.References.Account)]. Error: $($ex.Exception.Message). Action initiated by: [$($actionContext.Origin)]"
         Write-Warning "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($ex.Exception.Message)"
     }
     $outputContext.AuditLogs.Add([PSCustomObject]@{

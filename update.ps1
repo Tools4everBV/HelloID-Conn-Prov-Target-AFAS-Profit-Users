@@ -1,4 +1,4 @@
-﻿#################################################
+#################################################
 # HelloID-Conn-Prov-Target-AFAS-Profit-Users-Update
 # PowerShell V2
 #################################################
@@ -13,7 +13,7 @@
 [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor [System.Net.SecurityProtocolType]::Tls12
 
 #region functions
-function Resolve-AFAS-ProfitError {
+function Resolve-AFASProfitError {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory)]
@@ -41,6 +41,7 @@ function Resolve-AFAS-ProfitError {
         try {
             $errorDetailsObject = ($httpErrorObj.ErrorDetails | ConvertFrom-Json)
 
+            # 16 - AFAS returns the readable error in [externalMessage].
             if ($null -ne $errorDetailsObject.externalMessage) {
                 $httpErrorObj.FriendlyMessage = $errorDetailsObject.externalMessage
             }
@@ -50,6 +51,7 @@ function Resolve-AFAS-ProfitError {
         }
         catch {
             $httpErrorObj.FriendlyMessage = "[$($httpErrorObj.ErrorDetails)]"
+            Write-Warning $_.Exception.Message
         }
         Write-Output $httpErrorObj
     }
@@ -69,6 +71,11 @@ function Invoke-AFASUserUpdate {
         [Parameter(Mandatory)]
         [object]
         $FieldsToUpdate,
+
+        # 20 - Passed in explicitly instead of relying on the caller scope.
+        [Parameter(Mandatory)]
+        [hashtable]
+        $Headers,
 
         [Parameter(Mandatory)]
         [string]
@@ -91,7 +98,7 @@ function Invoke-AFASUserUpdate {
     $body = ($updateAccount | ConvertTo-Json -Depth 10)
     $splatUpdateParams = @{
         Uri             = "$($actionContext.Configuration.BaseUri)/connectors/$($actionContext.Configuration.UpdateConnector)"
-        Headers         = $headers
+        Headers         = $Headers
         Method          = 'PUT'
         Body            = ([System.Text.Encoding]::UTF8.GetBytes($body))
         ContentType     = 'application/json;charset=utf-8'
@@ -199,7 +206,7 @@ try {
                 }
 
                 if (-not($actionContext.DryRun -eq $true)) {
-                    Invoke-AFASUserUpdate -CurrentUsId $currentUsId -Name $correlatedAccount.Nm -FieldsToUpdate $fieldsToUpdate -AccountReference $actionContext.References.Account
+                    Invoke-AFASUserUpdate -CurrentUsId $currentUsId -Name $correlatedAccount.Nm -FieldsToUpdate $fieldsToUpdate -Headers $headers -AccountReference $actionContext.References.Account
                 }
                 else {
                     Write-Information "[DryRun] Update AFAS Profit account UsId with accountReference: [$($actionContext.References.Account)], will be executed during enforcement"
@@ -212,6 +219,7 @@ try {
                 $outputContext.Data | Add-Member -MemberType NoteProperty -Name 'BcCo' -Value $correlatedAccount.BcCo -Force
                 $outputContext.Success = $true
                 $outputContext.AuditLogs.Add([PSCustomObject]@{
+                        Action  = 'UpdateAccount'
                         Message = "Update account was successful, Account [UsId: $($previousUsId)] updated to [UsId: $($newUsId)]"
                         IsError = $false
                     })
@@ -232,21 +240,20 @@ try {
                 }
 
                 if (-not($actionContext.DryRun -eq $true)) {
-                    Invoke-AFASUserUpdate -CurrentUsId $currentUsId -Name $correlatedAccount.Nm -FieldsToUpdate $fieldsToUpdate -AccountReference $actionContext.References.Account
+                    Invoke-AFASUserUpdate -CurrentUsId $currentUsId -Name $correlatedAccount.Nm -FieldsToUpdate $fieldsToUpdate -Headers $headers -AccountReference $actionContext.References.Account
                 }
                 else {
                     Write-Information "[DryRun] Update AFAS Profit account with accountReference: [$($actionContext.References.Account)], will be executed during enforcement"
                 }
 
-                # Update outputContext.Data with changed values only, leaving unchanged values as-is.
+                # 1 - Update outputContext.Data with changed values only, leaving unchanged values as-is.
                 foreach ($property in $accountPropertiesChanged) {
-                    if ($property.Name -notin $outputContext.Data.PSObject.Properties.Name) {
-                        $outputContext.Data.$($property.Name) = $property.Value
-                    }
+                    $outputContext.Data.$($property.Name) = $property.Value
                 }
                 $outputContext.Data | Add-Member -MemberType NoteProperty -Name 'BcCo' -Value $correlatedAccount.BcCo -Force
                 $outputContext.Success = $true
                 $outputContext.AuditLogs.Add([PSCustomObject]@{
+                        Action  = 'UpdateAccount'
                         Message = "Update account was successful, Account property(s) updated: [$($accountPropertiesChanged.Name -join ',')]"
                         IsError = $false
                     })
@@ -259,6 +266,7 @@ try {
                 $outputContext.Data | Add-Member -MemberType NoteProperty -Name 'BcCo' -Value $correlatedAccount.BcCo -Force
                 $outputContext.Success = $true
                 $outputContext.AuditLogs.Add([PSCustomObject]@{
+                        Action  = 'UpdateAccount'
                         Message = "Skipped updating AFAS Profit account with accountReference: [$($actionContext.References.Account)]. Reason: No changes."
                         IsError = $false
                     })
@@ -270,6 +278,7 @@ try {
 
                 $outputContext.Success = $false
                 $outputContext.AuditLogs.Add([PSCustomObject]@{
+                        Action  = 'UpdateAccount'
                         Message = "AFAS Profit account with accountReference: [$($actionContext.References.Account)] could not be found, indicating that it may have been deleted"
                         IsError = $true
                     })
@@ -284,7 +293,7 @@ catch {
 
     if ($($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or
         $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
-        $errorObj = Resolve-AFAS-ProfitError -ErrorObject $ex
+        $errorObj = Resolve-AFASProfitError -ErrorObject $ex
         $auditLogMessage = "Could not update AFAS-Profit account: [$($actionContext.References.Account)]. Error: $($errorObj.FriendlyMessage)"
         Write-Warning "Error at Line '$($errorObj.ScriptLineNumber)': $($errorObj.Line). Error: $($errorObj.ErrorDetails)"
     }
@@ -294,6 +303,7 @@ catch {
     }
 
     $outputContext.AuditLogs.Add([PSCustomObject]@{
+            Action  = 'UpdateAccount'
             Message = $auditLogMessage
             IsError = $true
         })
