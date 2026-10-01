@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file. The format 
 ## [4.0.0] - 2026-09-29
 
 ### Changed
-- Changed authentication to OAuth (breaking: `Token` configuration field replaced by `ClientId` and `ClientSecret`)
+- Changed authentication to OAuth (breaking: `Token` configuration field replaced by `Client ID` (`ClientId`) and `Client Secret` (`ClientSecret`))
 
 ## [3.1.1] - 2025-07-16
 

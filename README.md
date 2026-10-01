@@ -58,7 +58,7 @@ Connecting to Profit is done using the app connector system with OAuth client cr
 
 [Manage the APP connector](https://help.afas.nl/help/NL/SE/App_Apps_Custom_Maint.htm)
 
-[Configure OAuth on the APP connector](https://docs.afas.help/profit/en/authentication#oauth)
+[Configure OAuth on the APP connector](https://help.afas.nl/help/NL/SE/120718.htm#o136210)
 
 ### HelloID Icon URL
 
@@ -92,8 +92,8 @@ The following settings are required to connect to the API.
 | Setting                       | Description                                                                                                                                                                           | Mandatory |
 | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
 | Base Uri                      | The URL to the AFAS environment REST services                                                                                                                                         | Yes       |
-| ClientId                      | The OAuth client id of the AppConnector                                                                                                                                                | Yes       |
-| ClientSecret                  | The OAuth client secret of the AppConnector                                                                                                                                            | Yes       |
+| Client ID                     | The OAuth client id of the AppConnector                                                                                                                                               | Yes       |
+| Client Secret                 | The OAuth client secret of the AppConnector                                                                                                                                           | Yes       |
 | Get Connector                 | The GetConnector in AFAS to query the user with                                                                                                                                       | Yes       |
 | Update Connector              | The UpdateConnector in AFAS to update the user with                                                                                                                                   | Yes       |
 | Create account when not found | When toggled, if the user account is not found, a new AFAS user account will be created in the create action (only in the create action).                                             |           |
