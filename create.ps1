@@ -57,13 +57,6 @@ try {
     $outputContext.AccountReference = 'Currently not available'
     $createUserEnabled = [bool]$actionContext.Configuration.CreateUser
 
-    # Encode token for AFAS API authentication
-    $base64Token = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes($actionContext.Configuration.Token))
-    $authHeader = @{
-        "Authorization" = "AfasToken $base64Token"
-        "IntegrationId" = "45963_140664" # Fixed value - Tools4ever Partner Integration ID
-    }
-
     # Validate correlation configuration
     if ($actionContext.CorrelationConfiguration.Enabled) {
         $correlationField = $actionContext.CorrelationConfiguration.AccountField
@@ -84,6 +77,29 @@ try {
 
         # Determine if a user needs to be [created] or [correlated]
         Write-Information "Verifying if a AFAS Profit Users account exists where $correlationField is: [$correlationValue]"
+        $tokenUri = "$($actionContext.Configuration.BaseUri)/oauth/token"
+        Write-Verbose "Requesting OAuth access token from [$tokenUri]"
+
+        $tokenRequestBody = @{
+            grant_type    = 'client_credentials'
+            client_id     = $actionContext.Configuration.ClientId
+            client_secret = $actionContext.Configuration.ClientSecret
+        }
+
+        $tokenResponse = Invoke-RestMethod -Method Post -Uri $tokenUri -Body $tokenRequestBody -ContentType 'application/x-www-form-urlencoded' -UseBasicParsing -ErrorAction Stop -Verbose:$false
+
+        if ([String]::IsNullOrWhiteSpace([String]$tokenResponse.access_token)) {
+            throw "OAuth token endpoint did not return an access_token."
+        }
+
+        if ([String]::IsNullOrWhiteSpace([String]$tokenResponse.token_type) -or ([String]$tokenResponse.token_type).ToLowerInvariant() -ne 'bearer') {
+            throw "OAuth token endpoint returned an unexpected token_type [$($tokenResponse.token_type)]. Expected [Bearer]."
+        }
+
+        $authHeader = @{
+            Authorization = "$($tokenResponse.token_type) $($tokenResponse.access_token)"
+            IntegrationId = '45963_140664'
+        }
 
         $notEmptyFilterValue = [uri]::EscapeDataString('[is niet leeg]')
         $splatQueryParams = @{
@@ -92,6 +108,7 @@ try {
             Headers         = $authHeader
             ContentType     = "application/json;charset=utf-8"
             UseBasicParsing = $true
+            ErrorAction     = 'Stop'
         }
 
         $correlatedAccount = @((Invoke-RestMethod @splatQueryParams).rows)

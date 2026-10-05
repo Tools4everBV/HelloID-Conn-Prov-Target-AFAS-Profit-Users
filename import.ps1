@@ -54,13 +54,30 @@ function Resolve-AFASProfitError {
 
 try {
     #Filter - Determine what defines an account entitlement, copy from AFAS Connect cURL
-    $Filter = "filterfieldids=EmId,UsId&filtervalues=%5Bis%20niet%20leeg%5D&operatortypes=9"
+    $Filter = "filterfieldids=UsId&filtervalues=%5Bis%20niet%20leeg%5D&operatortypes=9"
 
     Write-Information "Starting AFAS Users account entitlement import through get-connector [$($actionContext.Configuration.GetConnector)]"
 
-    $encodedToken = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($($actionContext.Configuration.Token)))
-    $authValue = "AfasToken $encodedToken"
-    $Headers = @{ Authorization = $authValue }
+    $tokenUri = "$($actionContext.Configuration.BaseUri)/oauth/token"
+    Write-Verbose "Requesting OAuth access token from [$tokenUri]"
+
+    $tokenRequestBody = @{
+        grant_type    = 'client_credentials'
+        client_id     = $actionContext.Configuration.ClientId
+        client_secret = $actionContext.Configuration.ClientSecret
+    }
+
+    $tokenResponse = Invoke-RestMethod -Method Post -Uri $tokenUri -Body $tokenRequestBody -ContentType 'application/x-www-form-urlencoded' -UseBasicParsing -ErrorAction Stop -Verbose:$false
+
+    if ([String]::IsNullOrWhiteSpace([String]$tokenResponse.access_token)) {
+        throw "OAuth token endpoint did not return an access_token."
+    }
+
+    if ([String]::IsNullOrWhiteSpace([String]$tokenResponse.token_type) -or ([String]$tokenResponse.token_type).ToLowerInvariant() -ne 'bearer') {
+        throw "OAuth token endpoint returned an unexpected token_type [$($tokenResponse.token_type)]. Expected [Bearer]."
+    }
+
+    $Headers = @{ Authorization = "$($tokenResponse.token_type) $($tokenResponse.access_token)" }
     $Headers.Add("IntegrationId", "45963_140664") # Fixed value - Tools4ever Partner Integration ID
 
     $take = 1000
@@ -72,7 +89,7 @@ try {
 
     do {
         $uri = "$($actionContext.Configuration.BaseUri)/connectors/$($actionContext.Configuration.GetConnector)?$Filter&skip=$skip&take=$take&orderbyfieldids=UsId"
-        $dataset = Invoke-RestMethod -Method Get -Uri $uri -Headers $Headers -UseBasicParsing
+        $dataset = Invoke-RestMethod -Method Get -Uri $uri -Headers $Headers -UseBasicParsing -ErrorAction Stop -ContentType 'application/json;charset=utf-8'
         $downloadedRecordCount += @($dataset.rows).Count
 
         foreach ($importedAccount in $dataset.rows) {
@@ -86,7 +103,6 @@ try {
             }
 
             $data = @{}
-
             foreach ($field in $($actionContext.ImportFields)) {
                 $data[$field] = $importedAccount."$field"
             }
