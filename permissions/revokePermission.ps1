@@ -64,6 +64,8 @@ try {
     }
 
     Write-Information 'Verifying if an AFAS Profit account exists'
+
+    # Create authorization headers using OAuth client credentials
     $tokenUri = "$($actionContext.Configuration.BaseUri)/oauth/token"
     Write-Verbose "Requesting OAuth access token from [$tokenUri]"
 
@@ -76,7 +78,7 @@ try {
     $tokenResponse = Invoke-RestMethod -Method Post -Uri $tokenUri -Body $tokenRequestBody -ContentType 'application/x-www-form-urlencoded' -UseBasicParsing -ErrorAction Stop -Verbose:$false
 
     if ([String]::IsNullOrWhiteSpace([String]$tokenResponse.access_token)) {
-        throw "OAuth token endpoint did not return an access_token."
+        throw 'OAuth token endpoint did not return an access_token.'
     }
 
     if ([String]::IsNullOrWhiteSpace([String]$tokenResponse.token_type) -or ([String]$tokenResponse.token_type).ToLowerInvariant() -ne 'bearer') {

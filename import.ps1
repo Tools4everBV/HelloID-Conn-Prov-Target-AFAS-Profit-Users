@@ -58,6 +58,7 @@ try {
 
     Write-Information "Starting AFAS Users account entitlement import through get-connector [$($actionContext.Configuration.GetConnector)]"
 
+    # Create authorization headers using OAuth client credentials
     $tokenUri = "$($actionContext.Configuration.BaseUri)/oauth/token"
     Write-Verbose "Requesting OAuth access token from [$tokenUri]"
 
@@ -70,15 +71,17 @@ try {
     $tokenResponse = Invoke-RestMethod -Method Post -Uri $tokenUri -Body $tokenRequestBody -ContentType 'application/x-www-form-urlencoded' -UseBasicParsing -ErrorAction Stop -Verbose:$false
 
     if ([String]::IsNullOrWhiteSpace([String]$tokenResponse.access_token)) {
-        throw "OAuth token endpoint did not return an access_token."
+        throw 'OAuth token endpoint did not return an access_token.'
     }
 
     if ([String]::IsNullOrWhiteSpace([String]$tokenResponse.token_type) -or ([String]$tokenResponse.token_type).ToLowerInvariant() -ne 'bearer') {
         throw "OAuth token endpoint returned an unexpected token_type [$($tokenResponse.token_type)]. Expected [Bearer]."
     }
 
-    $Headers = @{ Authorization = "$($tokenResponse.token_type) $($tokenResponse.access_token)" }
-    $Headers.Add("IntegrationId", "45963_140664") # Fixed value - Tools4ever Partner Integration ID
+    $Headers = @{
+        Authorization = "$($tokenResponse.token_type) $($tokenResponse.access_token)"
+        IntegrationId = '45963_140664' # Fixed value - Tools4ever Partner Integration ID
+    }
 
     $take = 1000
     $skip = 0

@@ -67,6 +67,7 @@ try {
     # Filter users where EmId (medewerkernummer) en UsId has a value.
     $filter = 'filterfieldids=EmId,UsId&filtervalues=%5Bis%20niet%20leeg%5D&operatortypes=9'
 
+    # Create authorization headers using OAuth client credentials
     $tokenUri = "$($actionContext.Configuration.BaseUri)/oauth/token"
     Write-Verbose "Requesting OAuth access token from [$tokenUri]"
 

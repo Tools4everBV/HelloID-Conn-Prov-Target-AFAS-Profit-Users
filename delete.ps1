@@ -63,6 +63,8 @@ try {
     }
 
     Write-Information 'Verifying if an AFAS Profit account exists'
+
+    # Create authorization headers using OAuth client credentials
     $tokenUri = "$($actionContext.Configuration.BaseUri)/oauth/token"
     Write-Verbose "Requesting OAuth access token from [$tokenUri]"
 

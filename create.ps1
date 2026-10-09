@@ -77,6 +77,8 @@ try {
 
         # Determine if a user needs to be [created] or [correlated]
         Write-Information "Verifying if a AFAS Profit Users account exists where $correlationField is: [$correlationValue]"
+        
+        # Create authorization headers using OAuth client credentials
         $tokenUri = "$($actionContext.Configuration.BaseUri)/oauth/token"
         Write-Verbose "Requesting OAuth access token from [$tokenUri]"
 
@@ -96,16 +98,16 @@ try {
             throw "OAuth token endpoint returned an unexpected token_type [$($tokenResponse.token_type)]. Expected [Bearer]."
         }
 
-        $authHeader = @{
+        $headers = @{
             Authorization = "$($tokenResponse.token_type) $($tokenResponse.access_token)"
-            IntegrationId = '45963_140664'
+            IntegrationId = '45963_140664' # Fixed value - Tools4ever Partner Integration ID
         }
 
         $notEmptyFilterValue = [uri]::EscapeDataString('[is niet leeg]')
         $splatQueryParams = @{
             Uri             = "$($actionContext.Configuration.BaseUri)/connectors/$($actionContext.Configuration.GetConnector)?filterfieldids=$($correlationField),BcCo&filtervalues=$([uri]::EscapeDataString($correlationValue)),$notEmptyFilterValue&operatortypes=1,9"
             Method          = 'GET'
-            Headers         = $authHeader
+            Headers         = $headers
             ContentType     = "application/json;charset=utf-8"
             UseBasicParsing = $true
             ErrorAction     = 'Stop'
@@ -184,7 +186,7 @@ try {
             $splatCreateParams = @{
                 Uri             = "$($actionContext.Configuration.BaseUri)/connectors/$($actionContext.Configuration.UpdateConnector)"
                 Method          = 'POST'
-                Headers         = $authHeader
+                Headers         = $headers
                 Body            = ([System.Text.Encoding]::UTF8.GetBytes($body))
                 ContentType     = 'application/json;charset=utf-8'
                 UseBasicParsing = $true
