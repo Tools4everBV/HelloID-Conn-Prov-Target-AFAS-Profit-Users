@@ -34,8 +34,6 @@ function Resolve-AFASProfitError {
         }
         try {
             $errorDetailsObject = ($httpErrorObj.ErrorDetails | ConvertFrom-Json)
-
-            # 16 - AFAS returns the readable error in [externalMessage].
             if ($null -ne $errorDetailsObject.externalMessage) {
                 $httpErrorObj.FriendlyMessage = $errorDetailsObject.externalMessage
             }
@@ -45,8 +43,7 @@ function Resolve-AFASProfitError {
         }
         catch {
             $httpErrorObj.FriendlyMessage = "[$($httpErrorObj.ErrorDetails)]"
-            Write-Warning $_.Exception.Message
-        }
+                    }
         Write-Output $httpErrorObj
     }
 }
