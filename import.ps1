@@ -84,12 +84,11 @@ try {
     $skip = 0
     $downloadedRecordCount = 0
 
-    # 18 - BcCo is the account reference. Track it to detect persons with more than one AFAS user.
     $processedAccountReferences = [System.Collections.Generic.HashSet[string]]::new()
 
     do {
         $uri = "$($actionContext.Configuration.BaseUri)/connectors/$($actionContext.Configuration.GetConnector)?$Filter&skip=$skip&take=$take&orderbyfieldids=UsId"
-        $dataset = Invoke-RestMethod -Method Get -Uri $uri -Headers $Headers -UseBasicParsing -ErrorAction Stop -ContentType 'application/json;charset=utf-8'
+        $dataset = Invoke-RestMethod -Method Get -Uri $uri -Headers $Headers -ContentType 'application/json;charset=utf-8' -UseBasicParsing -ErrorAction Stop
         $downloadedRecordCount += @($dataset.rows).Count
 
         foreach ($importedAccount in $dataset.rows) {
@@ -97,7 +96,7 @@ try {
                 continue
             }
 
-            # 18 - Log duplicates so they can be cleaned up in AFAS, but still return them and let HelloID handle it.
+            # Log duplicates so they can be cleaned up in AFAS, but still return them and let HelloID handle it.
             if (-not $processedAccountReferences.Add([string]$importedAccount.BcCo)) {
                 Write-Warning "AFAS user [$($importedAccount.UsId)] has person number [$($importedAccount.BcCo)], which is already used as account reference by another user. A person number must resolve to a single AFAS user."
             }
@@ -117,7 +116,6 @@ try {
                 AccountReference = [string]$importedAccount.BcCo
                 DisplayName      = $displayName.substring(0, [System.Math]::Min(100, $displayName.Length))
                 UserName         = $importedAccount.UsId
-                # 9 - Bl is a boolean in the GetConnector, so evaluate it as one instead of via a string compare.
                 Enabled          = (-not [bool]$importedAccount.Bl)
                 Data             = $data
             }

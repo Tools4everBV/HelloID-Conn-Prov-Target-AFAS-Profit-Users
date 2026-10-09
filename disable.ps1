@@ -47,7 +47,7 @@ function Resolve-AFASProfitError {
         }
         catch {
             $httpErrorObj.FriendlyMessage = "[$($httpErrorObj.ErrorDetails)]"
-                    }
+        }
         Write-Output $httpErrorObj
     }
 }
@@ -167,7 +167,6 @@ try {
             }
 
             $body = ($updateAccount | ConvertTo-Json -Depth 10)
-            # 14 - During reconciliation the payload comes from [DisableMode], not from the mapping.
             $fieldsInPayload = ($fieldsToUpdate.Keys | ForEach-Object { [string]$_ }) -join ', '
             $splatUpdateParams = @{
                 Uri             = "$($actionContext.Configuration.BaseUri)/connectors/$($actionContext.Configuration.UpdateConnector)"

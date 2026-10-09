@@ -47,7 +47,7 @@ function Resolve-AFASProfitError {
         }
         catch {
             $httpErrorObj.FriendlyMessage = "[$($httpErrorObj.ErrorDetails)]"
-                    }
+        }
         Write-Output $httpErrorObj
     }
 }
@@ -108,7 +108,7 @@ try {
             throw 'Correlated AFAS user is missing required identifier [Gebruiker/UsId]. Verify the AFAS GetConnector output.'
         }
 
-        # 12 - AFAS dependency: Profit Windows cannot be enabled while InSite is inactive. Report this
+        # AFAS dependency: Profit Windows cannot be enabled while InSite is inactive. Report this
         # instead of enabling InSite, because that would grant a permission that was not requested.
         if ($permissionReference -eq 'Awin' -and -not [bool]$correlatedAccount.InSi) {
             throw "Permission [$permissionReference] can only be granted when permission [InSi] is active. Grant [InSite access] first."

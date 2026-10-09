@@ -43,7 +43,7 @@ function Resolve-AFASProfitError {
         }
         catch {
             $httpErrorObj.FriendlyMessage = "[$($httpErrorObj.ErrorDetails)]"
-                    }
+        }
         Write-Output $httpErrorObj
     }
 }
@@ -109,7 +109,7 @@ try {
             $property = $account.PSObject.Properties[$permission.Reference]
             $permissionValue = if ($null -eq $property) { $null } else { $property.Value }
 
-            # 9 - Permission fields are booleans in the GetConnector, so evaluate them as one.
+            # Permission fields are booleans in the GetConnector, so evaluate them as one.
             if (([bool]$permissionValue) -and -not [string]::IsNullOrWhiteSpace($account.BcCo)) {
                 $null = $memberReferences.Add([string]$account.BcCo)
             }

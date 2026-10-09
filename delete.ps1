@@ -181,7 +181,6 @@ try {
             }
 
             $body = ($updateAccount | ConvertTo-Json -Depth 10)
-            # 14 - During reconciliation the payload comes from [DeleteMode], not from the mapping.
             $fieldsInPayload = ($fieldsToUpdate.Keys | ForEach-Object { [string]$_ }) -join ', '
             $splatUpdateParams = @{
                 Uri             = "$($actionContext.Configuration.BaseUri)/connectors/$($actionContext.Configuration.UpdateConnector)"

@@ -70,9 +70,9 @@
     "type": "checkbox",
     "defaultValue": false,
     "templateOptions": {
-      "label": "Create user when Medewerker has no UsId",
+      "label": "Create user when Medewerker has no User ID",
       "required": false,
-      "description": "When enabled, create action may create a new AFAS user if the correlated Medewerker has no UsId. Default behavior is correlate-only."
+      "description": "When enabled, create action may create a new AFAS user if the correlated Medewerker has no User ID. Default behavior is correlate-only."
     }
   },
   {
@@ -81,7 +81,7 @@
     "defaultValue": "enableOutSiteNoBlock",
     "templateOptions": {
       "label": "Behavior on disable during a reconciliation action",
-      "description": "Choose how block status, group memberships, and OutSite are handled during disable.",
+      "description": "Applies only when disable is triggered by reconciliation (e.g. the account was removed from the source but still exists in AFAS). A regular disable action uses the field mapping instead. Choose how block status, group memberships, and OutSite are handled.",
       "options": [
         {
           "label": "OutSite enabled, no block",
@@ -105,7 +105,7 @@
     "defaultValue": "enableOutSiteNoBlock",
     "templateOptions": {
       "label": "Behavior on delete during a reconciliation action",
-      "description": "Choose how block status, group memberships, and OutSite are handled during delete.",
+      "description": "Applies only when delete is triggered by reconciliation (e.g. the account was removed from the source but still exists in AFAS). Choose how block status, group memberships, and OutSite are handled.",
       "options": [
         {
           "label": "OutSite enabled, no block, keep email as is",

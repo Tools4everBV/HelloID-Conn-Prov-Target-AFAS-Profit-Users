@@ -71,7 +71,6 @@ function Invoke-AFASUserUpdate {
         [object]
         $FieldsToUpdate,
 
-        # 20 - Passed in explicitly instead of relying on the caller scope.
         [Parameter(Mandatory)]
         [hashtable]
         $Headers,
@@ -189,7 +188,6 @@ try {
             DifferenceObject = $mappedProperties
         }
         $propertiesChanged = @(Compare-Object @splatCompareProperties -PassThru | Where-Object { $_.SideIndicator -eq '=>' })
-
         $usIdChange = @($propertiesChanged | Where-Object { $_.Name -eq 'UsId' })
         $accountPropertiesChanged = @($propertiesChanged | Where-Object { $_.Name -ne 'UsId' })
 
@@ -269,7 +267,7 @@ try {
                     Write-Information "[DryRun] Update AFAS Profit account with accountReference: [$($actionContext.References.Account)], will be executed during enforcement"
                 }
 
-                # 1 - Update outputContext.Data with changed values only, leaving unchanged values as-is.
+                # Update outputContext.Data with changed values only, leaving unchanged values as-is.
                 foreach ($property in $accountPropertiesChanged) {
                     $outputContext.Data.$($property.Name) = $property.Value
                 }

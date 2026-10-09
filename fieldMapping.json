@@ -3,7 +3,7 @@
   "MappingFields": [
     {
       "Name": "EmId",
-      "Description": "[Required] Correlation value (employee code)",
+      "Description": "[Required] Correlation value (employee number)",
       "Type": "Text",
       "MappingActions": [
         {
@@ -45,7 +45,7 @@
     },
     {
       "Name": "UsId",
-      "Description": "[Required] AFAS user code. Update mapping only executed when update toggle is enabled in connector configuration.",
+      "Description": "[Required] AFAS user ID. Update mapping only executed when update toggle is enabled in connector configuration.",
       "Type": "Text",
       "MappingActions": [
         {

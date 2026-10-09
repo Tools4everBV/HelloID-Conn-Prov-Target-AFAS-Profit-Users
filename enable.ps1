@@ -47,7 +47,7 @@ function Resolve-AFASProfitError {
         }
         catch {
             $httpErrorObj.FriendlyMessage = "[$($httpErrorObj.ErrorDetails)]"
-                    }
+        }
         Write-Output $httpErrorObj
     }
 }
@@ -141,7 +141,6 @@ try {
             }
 
             $body = ($updateAccount | ConvertTo-Json -Depth 10)
-            # 14 - Log the fields that are actually sent instead of the mapped fields.
             $fieldsInPayload = ($fieldsToUpdate.Keys | ForEach-Object { [string]$_ }) -join ', '
             $splatUpdateParams = @{
                 Uri             = "$($actionContext.Configuration.BaseUri)/connectors/$($actionContext.Configuration.UpdateConnector)"
