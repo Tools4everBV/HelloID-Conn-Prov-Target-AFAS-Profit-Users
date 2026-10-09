@@ -66,10 +66,9 @@ try {
             throw 'Correlation is enabled but [accountFieldValue] is empty. Please make sure it is correctly mapped'
         }
 
-        # 6 - AFAS splits [filtervalues] on the comma. A comma in the value silently shifts all following
-        # filter values, which returns a wrong match instead of an error. EscapeDataString does not cover this.
-        if ($correlationValue -match ',') {
-            throw "Correlation value [$correlationValue] contains a comma. This character is the AFAS filter separator and cannot be used in [filtervalues]"
+        # AFAS splits [filtervalues] on the comma. A comma in the value silently shifts all following filter values, which returns a wrong match instead of an error. EscapeDataString does not cover this.
+        if ($correlationValue -match '[,;]') {
+            throw "Correlation value [$correlationValue] contains a comma or semicolon, which cannot be used in AFAS [filtervalues]"
         }
 
         # Determine if a user needs to be [created] or [correlated]
@@ -142,7 +141,7 @@ try {
         'CreateAccount' {
             $newUsId = [string]$actionContext.Data.UsId
 
-            # 8 - Nm is the user description. A Medewerker without UsId has no description yet, while AFAS requires it.
+            # Nm is the user description. A Medewerker without UsId has no description yet, while AFAS requires it.
             $userDescription = [string]$correlatedAccount.Nm
             if ([string]::IsNullOrWhiteSpace($userDescription)) {
                 $userDescription = $newUsId

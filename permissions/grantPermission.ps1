@@ -59,6 +59,9 @@ try {
     if ([string]::IsNullOrEmpty($($actionContext.References.Account))) {
         throw 'The account reference could not be found'
     }
+    if ($actionContext.References.Account -match '[,;]') {
+        throw 'Account reference contains a comma or semicolon, which cannot be used in AFAS filter values'
+    }
 
     Write-Information 'Verifying if an AFAS Profit account exists'
 
@@ -120,9 +123,15 @@ try {
     # Process
     switch ($lifecycleProcess) {
         'GrantPermission' {
+            # Nm is mandatory; fall back to UsId when AFAS has no name on file.
+            $userDescription = [string]$correlatedAccount.Nm
+            if ([string]::IsNullOrWhiteSpace($userDescription)) {
+                $userDescription = [string]$correlatedAccount.UsId
+            }
+
             # Mandatory fields
             $fieldsToUpdate = [ordered]@{
-                Nm   = [string]$correlatedAccount.Nm
+                Nm   = $userDescription
                 MtCd = 1 # Import without changing the block status
             }
             $fieldsToUpdate[$permissionReference] = 'true'

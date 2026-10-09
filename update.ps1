@@ -62,6 +62,8 @@ function Invoke-AFASUserUpdate {
         $CurrentUsId,
 
         [Parameter(Mandatory)]
+        [AllowNull()]
+        [AllowEmptyString()]
         [string]
         $Name,
 
@@ -80,7 +82,8 @@ function Invoke-AFASUserUpdate {
     )
 
     if (-not $FieldsToUpdate.Contains('Nm')) {
-        $FieldsToUpdate['Nm'] = $Name
+        # Nm is mandatory; fall back to UsId when AFAS has no name on file.
+        $FieldsToUpdate['Nm'] = if ([string]::IsNullOrWhiteSpace($Name)) { $CurrentUsId } else { $Name }
     }
 
     $updateAccount = [PSCustomObject]@{
@@ -112,6 +115,9 @@ try {
     # Verify if [accountReference] has a value
     if ([string]::IsNullOrEmpty($($actionContext.References.Account))) {
         throw 'The account reference could not be found'
+    }
+    if ($actionContext.References.Account -match '[,;]') {
+        throw 'Account reference contains a comma or semicolon, which cannot be used in AFAS filter values'
     }
 
     Write-Information 'Verifying if an AFAS Profit account exists'
