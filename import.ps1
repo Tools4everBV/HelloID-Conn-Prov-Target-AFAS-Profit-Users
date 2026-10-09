@@ -43,7 +43,7 @@ function Resolve-AFASProfitError {
         }
         catch {
             $httpErrorObj.FriendlyMessage = "[$($httpErrorObj.ErrorDetails)]"
-                    }
+        }
         Write-Output $httpErrorObj
     }
 }

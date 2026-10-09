@@ -61,8 +61,8 @@ try {
         @{ DisplayName = 'AFAS Accept'; Reference = 'AcUs' }
     )
 
-    # Filter users where EmId (medewerkernummer) en UsId has a value.
-    $filter = 'filterfieldids=EmId,UsId&filtervalues=%5Bis%20niet%20leeg%5D&operatortypes=9'
+    #Filter - Determine what defines an account entitlement, copy from AFAS Connect cURL
+    $filter = 'filterfieldids=UsId&filtervalues=%5Bis%20niet%20leeg%5D&operatortypes=9'
 
     # Create authorization headers using OAuth client credentials
     $tokenUri = "$($actionContext.Configuration.BaseUri)/oauth/token"

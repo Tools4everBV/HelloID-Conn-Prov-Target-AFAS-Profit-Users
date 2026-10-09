@@ -47,7 +47,7 @@ function Resolve-AFASProfitError {
         }
         catch {
             $httpErrorObj.FriendlyMessage = "[$($httpErrorObj.ErrorDetails)]"
-                    }
+        }
         Write-Output $httpErrorObj
     }
 }
@@ -140,12 +140,13 @@ try {
 
             # We can only support certain actions during reconciliation.
             if ($actionContext.Origin -eq 'reconciliation') {
+                # AFAS clears text fields with an empty string, not with JSON null.
                 if ($deleteMode -in @('blockKeepGroupsDisableOutSite', 'blockRemoveGroupsDisableOutSite')) {
-                    # Clear email and upn
-                    $fieldsToUpdate['EmAd'] = $null
-                    $fieldsToUpdate['Upn'] = $null
-                } else {
-                    $fieldsToUpdate['Upn'] = $null
+                    $fieldsToUpdate['EmAd'] = ''
+                    $fieldsToUpdate['Upn'] = ''
+                }
+                else {
+                    $fieldsToUpdate['Upn'] = ''
                 }
             }
 
