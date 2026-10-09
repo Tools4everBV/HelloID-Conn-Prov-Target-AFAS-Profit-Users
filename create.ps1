@@ -43,7 +43,7 @@ function Resolve-AFASProfitError {
         }
         catch {
             $httpErrorObj.FriendlyMessage = "[$($httpErrorObj.ErrorDetails)]"
-                    }
+        }
         Write-Output $httpErrorObj
     }
 }
@@ -157,9 +157,9 @@ try {
                 InSi = 'false'
             }
 
-            # 7 - UsId is sent as element key and EmId is a GetConnector correlation field only.
-            # Both are not valid KnUser fields and are rejected by AFAS when present in the payload.
-            $fieldsToExcludeFromPayload = @('UsId', 'EmId')
+            # UsId is sent as element key, EmId is a GetConnector correlation field only. Both are not valid KnUser fields and are rejected by AFAS when present in the payload.
+            # BcCo should never be updated by HelloID.
+            $fieldsToExcludeFromPayload = @('UsId', 'EmId', 'BcCo')
 
             # Add/overwrite remaining fields from mapping data.
             foreach ($property in $actionContext.Data.PSObject.Properties) {

@@ -49,7 +49,7 @@ function Resolve-AFASProfitError {
         }
         catch {
             $httpErrorObj.FriendlyMessage = "[$($httpErrorObj.ErrorDetails)]"
-                    }
+        }
         Write-Output $httpErrorObj
     }
 }
@@ -168,24 +168,38 @@ try {
         $currentUsId = [string]$correlatedAccount.UsId
 
         $outputContext.PreviousData = $correlatedAccount | Select-Object -Property $outputContext.Data.PSObject.Properties.Name
-        
-        $mappedProperties = @($actionContext.Data.PSObject.Properties | ForEach-Object {
-                if ($_.Value -is [string] -and $_.Value -eq '') { $_.Value = $null }
-                if ($_.Value -is [string] -and $_.Value -eq "false") { $_.Value = $false }
-                if ($_.Value -is [string] -and $_.Value -eq "true") { $_.Value = $true }
-                $_
-            }
-        )
 
-        # Only use mapped UsId when explicit UpdateUserId is enabled.
-        if (-not $updateUserIdEnabled) {
-            $mappedProperties = @($mappedProperties | Where-Object { $_.Name -ne 'UsId' })
+        $mappedData = [PSCustomObject]@{}
+        $currentData = [PSCustomObject]@{}
+        $mappedValues = @{}
+
+        foreach ($mappedProperty in $actionContext.Data.PSObject.Properties) {
+            if ($mappedProperty.Name -eq 'BcCo' -or ($mappedProperty.Name -eq 'UsId' -and -not $updateUserIdEnabled)) {
+                continue
+            }
+            if ($null -eq $correlatedAccount.PSObject.Properties[$mappedProperty.Name] -or $null -eq $mappedProperty.Value) {
+                continue
+            }
+
+            $mappedValue = $mappedProperty.Value
+            $mappedValues[$mappedProperty.Name] = $mappedValue
+            $mappedComparisonValue = [string]$mappedValue
+            if ($mappedValue -is [string] -and $mappedValue -match '^(true|false)$') {
+                $mappedComparisonValue = $mappedComparisonValue.ToLowerInvariant()
+            }
+            $currentValue = $correlatedAccount.PSObject.Properties[$mappedProperty.Name].Value
+            $currentComparisonValue = [string]$currentValue
+            if ($currentValue -is [bool]) {
+                $currentComparisonValue = $currentComparisonValue.ToLowerInvariant()
+            }
+
+            $mappedData | Add-Member -MemberType NoteProperty -Name $mappedProperty.Name -Value $mappedComparisonValue -Force
+            $currentData | Add-Member -MemberType NoteProperty -Name $mappedProperty.Name -Value $currentComparisonValue -Force
         }
 
-        # Always compare the account against the current account in target system
         $splatCompareProperties = @{
-            ReferenceObject  = @($correlatedAccount.PSObject.Properties)
-            DifferenceObject = $mappedProperties
+            ReferenceObject  = @($currentData.PSObject.Properties)
+            DifferenceObject = @($mappedData.PSObject.Properties)
         }
         $propertiesChanged = @(Compare-Object @splatCompareProperties -PassThru | Where-Object { $_.SideIndicator -eq '=>' })
         $usIdChange = @($propertiesChanged | Where-Object { $_.Name -eq 'UsId' })
@@ -193,7 +207,7 @@ try {
 
         # Depending on connector configuration, allow changes of the User ID (UsId).
         if ($updateUserIdEnabled -and $usIdChange.Count -gt 0 -and $actionContext.AccountCorrelated) {
-            $newUsId = [string]($usIdChange | Select-Object -First 1 -ExpandProperty Value)
+            $newUsId = [string]$mappedValues['UsId']
             $lifecycleActionList += @('UpdateUserId')
         }
         # Keep UsId in output data aligned with the current AFAS value when it exists in mapping.
@@ -257,7 +271,7 @@ try {
 
                 # Add changed properties to Fields payload.
                 foreach ($property in $accountPropertiesChanged) {
-                    $fieldsToUpdate[$property.Name] = $property.Value
+                    $fieldsToUpdate[$property.Name] = $mappedValues[$property.Name]
                 }
 
                 if (-not($actionContext.DryRun -eq $true)) {
@@ -269,7 +283,7 @@ try {
 
                 # Update outputContext.Data with changed values only, leaving unchanged values as-is.
                 foreach ($property in $accountPropertiesChanged) {
-                    $outputContext.Data.$($property.Name) = $property.Value
+                    $outputContext.Data | Add-Member -MemberType NoteProperty -Name $property.Name -Value $mappedValues[$property.Name] -Force
                 }
                 $outputContext.Data | Add-Member -MemberType NoteProperty -Name 'BcCo' -Value $correlatedAccount.BcCo -Force
                 $outputContext.Success = $true
