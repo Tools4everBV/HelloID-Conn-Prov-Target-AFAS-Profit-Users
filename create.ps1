@@ -196,13 +196,13 @@ try {
                 $outputContext.Data = $actionContext.Data | Select-Object -Property $outputContext.Data.PSObject.Properties.Name
                 $outputContext.AccountReference = [string]$fieldsToCreate['BcCo']
 
-                $auditLogMessage = "Created and correlated AFAS account with accountReference: [$($outputContext.AccountReference)]. Account property(s) set: [$fieldsInPayload]"
+                $auditLogMessage = "Created and correlated AFAS account with accountReference: [$($outputContext.AccountReference)]. Create payload fields: [$fieldsInPayload]"
             }
             else {
                 Write-Information "[DryRun] Create and correlate AFAS account [$newUsId], will be executed during enforcement. Fields in create payload: [$fieldsInPayload]"
                 $outputContext.Data = $actionContext.Data | Select-Object -Property $outputContext.Data.PSObject.Properties.Name
                 $outputContext.AccountReference = [string]$fieldsToCreate['BcCo']
-                $auditLogMessage = "[DryRun] Would create and correlate AFAS account with accountReference: [$($outputContext.AccountReference)]. Account property(s) to set: [$fieldsInPayload]"
+                $auditLogMessage = "[DryRun] Would create and correlate AFAS account with accountReference: [$($outputContext.AccountReference)]. Create payload fields: [$fieldsInPayload]"
             }
 
             $outputContext.success = $true

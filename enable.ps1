@@ -153,13 +153,13 @@ try {
             }
 
             if (-not($actionContext.DryRun -eq $true)) {
-                Write-Information "Enabling AFAS Profit account with accountReference: [$($actionContext.References.Account)]. Fields in update: [$fieldsInPayload]"
+                Write-Information "Enabling AFAS Profit account with accountReference: [$($actionContext.References.Account)]. Enable payload fields: [$fieldsInPayload]"
                 $null = Invoke-RestMethod @splatUpdateParams -Verbose:$false
-                $auditLogMessage = "Enabled AFAS Profit account with accountReference: [$($actionContext.References.Account)]. Account property(s) updated: [$fieldsInPayload]"
+                $auditLogMessage = "Enabled AFAS Profit account with accountReference: [$($actionContext.References.Account)]. Enable payload fields: [$fieldsInPayload]"
             }
             else {
-                Write-Information "[DryRun] Enable AFAS Profit account with accountReference: [$($actionContext.References.Account)], will be executed during enforcement. Fields in update: [$fieldsInPayload]"
-                $auditLogMessage = "[DryRun] Would enable AFAS Profit account with accountReference: [$($actionContext.References.Account)]. Account property(s) to update: [$fieldsInPayload]"
+                Write-Information "[DryRun] Enable AFAS Profit account with accountReference: [$($actionContext.References.Account)], will be executed during enforcement. Enable payload fields: [$fieldsInPayload]"
+                $auditLogMessage = "[DryRun] Would enable AFAS Profit account with accountReference: [$($actionContext.References.Account)]. Enable payload fields: [$fieldsInPayload]"
             }
 
             $outputContext.Success = $true

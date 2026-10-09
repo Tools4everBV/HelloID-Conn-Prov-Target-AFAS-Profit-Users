@@ -194,13 +194,13 @@ try {
             }
             
             if (-not($actionContext.DryRun -eq $true)) {
-                Write-Information "Deleting AFAS Profit account with accountReference: [$($actionContext.References.Account)]. Fields in update: [$fieldsInPayload]"
+                Write-Information "Deleting AFAS Profit account with accountReference: [$($actionContext.References.Account)]. Update payload fields: [$fieldsInPayload]"
                 $null = Invoke-RestMethod @splatUpdateParams -Verbose:$false
-                $auditLogMessage = "Delete AFAS Profit account with accountReference: [$($actionContext.References.Account)] was successful. Account property(s) updated: [$fieldsInPayload]. Action initiated by: [$($actionContext.Origin)]"
+                $auditLogMessage = "Delete AFAS Profit account with accountReference: [$($actionContext.References.Account)] was successful. Update payload fields: [$fieldsInPayload]. Action initiated by: [$($actionContext.Origin)]"
             }
             else {
-                Write-Information "[DryRun] Delete AFAS Profit account with accountReference: [$($actionContext.References.Account)], will be executed during enforcement. Fields in update: [$fieldsInPayload]"
-                $auditLogMessage = "[DryRun] Would delete AFAS Profit account with accountReference: [$($actionContext.References.Account)]. Account property(s) to update: [$fieldsInPayload]. Action initiated by: [$($actionContext.Origin)]"
+                Write-Information "[DryRun] Delete AFAS Profit account with accountReference: [$($actionContext.References.Account)], will be executed during enforcement. Update payload fields: [$fieldsInPayload]"
+                $auditLogMessage = "[DryRun] Would delete AFAS Profit account with accountReference: [$($actionContext.References.Account)]. Update payload fields: [$fieldsInPayload]. Action initiated by: [$($actionContext.Origin)]"
             }
 
             $outputContext.Success = $true
