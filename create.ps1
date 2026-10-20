@@ -151,6 +151,7 @@ try {
             $fieldsToCreate = [ordered]@{
                 BcCo = [string]$correlatedAccount.BcCo
                 Nm   = $userDescription
+                MtCd = 1
                 Acon = 'false'
                 Abac = 'false'
                 Acom = 'false'
