@@ -6,6 +6,7 @@
     "templateOptions": {
       "label": "Base Uri",
       "placeholder": "https://12345.rest.afas.online/profitrestservices",
+      "description": "Base URL of the AFAS Profit REST services endpoint.",
       "required": true
     }
   },
@@ -35,10 +36,11 @@
   {
     "key": "GetConnector",
     "type": "input",
-    "defaultValue": "T4E_HelloID_Users_v2",
+    "defaultValue": "T4E_HelloID_Target_Users",
     "templateOptions": {
       "label": "GetConnector",
-      "placeholder": "T4E_HelloID_Users_v2",
+      "placeholder": "T4E_HelloID_Target_Users",
+      "description": "Name of the AFAS GetConnector.",
       "required": true
     }
   },
@@ -49,47 +51,76 @@
     "templateOptions": {
       "label": "UpdateConnector",
       "placeholder": "KnUser",
+      "description": "Name of the AFAS UpdateConnector used for account mutations.",
       "required": true
     }
   },
   {
-    "key": "createUser",
+    "key": "UpdateUserId",
     "type": "checkbox",
     "defaultValue": false,
     "templateOptions": {
-      "label": "Create user when not found",
+      "label": "Update User ID after correlation",
       "required": false,
-      "description": "When toggled, if the user account is not found, a new the AFAS user account will be created in the create action (only in the create action)."
+      "description": "When enabled, the AFAS User ID is updated when it differs from the mapped value. This is only applicable when the account is correlated. Use with care, because changing User ID can affect existing AFAS links and dependencies. Please consult AFAS first."
     }
   },
   {
-    "key": "onlyUpdateOnCorrelate",
+    "key": "CreateUser",
     "type": "checkbox",
     "defaultValue": false,
     "templateOptions": {
-      "label": "Only update on correlate",
+      "label": "Create user when Medewerker has no User ID",
       "required": false,
-      "description": "When toggled, the AFAS user will only be updated when the account is correlated"
+      "description": "When enabled, create action may create a new AFAS user if the correlated Medewerker has no User ID. Default behavior is correlate-only."
     }
   },
   {
-    "key": "updateUserId",
-    "type": "checkbox",
-    "defaultValue": false,
+    "key": "DisableMode",
+    "type": "select",
+    "defaultValue": "enableOutSiteNoBlock",
     "templateOptions": {
-      "label": "Update User ID",
-      "required": false,
-      "description": "When toggled, the User ID will be updated if it doesn't match mapped naming convention. Use with care! This can break certain links in AFAS. Please consult AFAS first."
+      "label": "Behavior on disable during a reconciliation action",
+      "description": "Applies only when disable is triggered by reconciliation (e.g. the account was removed from the source but still exists in AFAS). A regular disable action uses the field mapping instead. Choose how block status, group memberships, and OutSite are handled.",
+      "options": [
+        {
+          "label": "OutSite enabled, no block",
+          "value": "enableOutSiteNoBlock"
+        },
+        {
+          "label": "Block user and keep groups, OutSite disabled",
+          "value": "blockKeepGroupsDisableOutSite"
+        },
+        {
+          "label": "Block user and remove groups, OutSite disabled",
+          "value": "blockRemoveGroupsDisableOutSite"
+        }
+      ],
+      "required": true
     }
   },
   {
-    "key": "isDebug",
-    "type": "checkbox",
-    "defaultValue": false,
+    "key": "DeleteMode",
+    "type": "select",
+    "defaultValue": "enableOutSiteNoBlock",
     "templateOptions": {
-      "label": "Toggle debug logging",
-      "description": "When toggled, debug logging will be displayed",
-      "required": false
+      "label": "Behavior on delete during a reconciliation action",
+      "description": "Applies only when delete is triggered by reconciliation (e.g. the account was removed from the source but still exists in AFAS). Choose how block status, group memberships, and OutSite are handled.",
+      "options": [
+        {
+          "label": "OutSite enabled, no block, keep email as is",
+          "value": "enableOutSiteNoBlock"
+        },
+        {
+          "label": "Block user and keep groups, OutSite disabled, clear email and upn",
+          "value": "blockKeepGroupsDisableOutSite"
+        },
+        {
+          "label": "Block user and remove groups, OutSite disabled, clear email and upn",
+          "value": "blockRemoveGroupsDisableOutSite"
+        }
+      ],
+      "required": true
     }
   }
 ]

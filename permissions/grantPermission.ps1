@@ -1,0 +1,206 @@
+################################################################
+# HelloID-Conn-Prov-Target-AFAS-Profit-Users-GrantPermission
+# PowerShell V2
+################################################################
+
+#TODO: Remove hardcoded values
+# $actionContext.References.Account = "45963.AndreO"
+# $actionContext.DryRun = $false
+
+# Enable TLS1.2
+[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor [System.Net.SecurityProtocolType]::Tls12
+
+#region functions
+function Resolve-AFASProfitError {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory)]
+        [object]
+        $ErrorObject
+    )
+    process {
+        $httpErrorObj = [PSCustomObject]@{
+            ScriptLineNumber = $ErrorObject.InvocationInfo.ScriptLineNumber
+            Line             = $ErrorObject.InvocationInfo.Line
+            ErrorDetails     = $ErrorObject.Exception.Message
+            FriendlyMessage  = $ErrorObject.Exception.Message
+        }
+        if (-not [string]::IsNullOrEmpty($ErrorObject.ErrorDetails.Message)) {
+            $httpErrorObj.ErrorDetails = $ErrorObject.ErrorDetails.Message
+        }
+        elseif ($ErrorObject.Exception.GetType().FullName -eq 'System.Net.WebException') {
+            if ($null -ne $ErrorObject.Exception.Response) {
+                $streamReaderResponse = [System.IO.StreamReader]::new($ErrorObject.Exception.Response.GetResponseStream()).ReadToEnd()
+                if (-not [string]::IsNullOrEmpty($streamReaderResponse)) {
+                    $httpErrorObj.ErrorDetails = $streamReaderResponse
+                }
+            }
+        }
+        try {
+            $errorDetailsObject = ($httpErrorObj.ErrorDetails | ConvertFrom-Json)
+            if ($null -ne $errorDetailsObject.externalMessage) {
+                $httpErrorObj.FriendlyMessage = $errorDetailsObject.externalMessage
+            }
+            else {
+                $httpErrorObj.FriendlyMessage = $errorDetailsObject
+            }
+        }
+        catch {
+            $httpErrorObj.FriendlyMessage = "[$($httpErrorObj.ErrorDetails)]"
+        }
+        Write-Output $httpErrorObj
+    }
+}
+#endregion
+
+# Begin
+try {
+    # Verify if [accountReference] has a value
+    if ([string]::IsNullOrEmpty($($actionContext.References.Account))) {
+        throw 'The account reference could not be found'
+    }
+    if ($actionContext.References.Account -match '[,;]') {
+        throw 'Account reference contains a comma or semicolon, which cannot be used in AFAS filter values'
+    }
+
+    Write-Information 'Verifying if an AFAS Profit account exists'
+
+    # Create authorization headers using OAuth client credentials
+    $tokenUri = "$($actionContext.Configuration.BaseUri)/oauth/token"
+    Write-Verbose "Requesting OAuth access token from [$tokenUri]"
+
+    $tokenRequestBody = @{
+        grant_type    = 'client_credentials'
+        client_id     = $actionContext.Configuration.ClientId
+        client_secret = $actionContext.Configuration.ClientSecret
+    }
+
+    $tokenResponse = Invoke-RestMethod -Method Post -Uri $tokenUri -Body $tokenRequestBody -ContentType 'application/x-www-form-urlencoded' -UseBasicParsing -ErrorAction Stop -Verbose:$false
+
+    if ([String]::IsNullOrWhiteSpace([String]$tokenResponse.access_token)) {
+        throw 'OAuth token endpoint did not return an access_token.'
+    }
+
+    if ([String]::IsNullOrWhiteSpace([String]$tokenResponse.token_type) -or ([String]$tokenResponse.token_type).ToLowerInvariant() -ne 'bearer') {
+        throw "OAuth token endpoint returned an unexpected token_type [$($tokenResponse.token_type)]. Expected [Bearer]."
+    }
+
+    $headers = @{
+        Authorization = "$($tokenResponse.token_type) $($tokenResponse.access_token)"
+        IntegrationId = '45963_140664' # Fixed value - Tools4ever Partner Integration ID
+    }
+
+    $splatQueryParams = @{
+        Uri             = "$($actionContext.Configuration.BaseUri)/connectors/$($actionContext.Configuration.GetConnector)?filterfieldids=BcCo&filtervalues=$([uri]::EscapeDataString($actionContext.References.Account))&operatortypes=1"
+        Headers         = $headers
+        Method          = 'GET'
+        ContentType     = 'application/json;charset=utf-8'
+        UseBasicParsing = $true
+        ErrorAction     = 'Stop'
+    }
+
+    $correlatedAccount = @((Invoke-RestMethod @splatQueryParams).rows)
+    $permissionReference = [string]$actionContext.References.Permission.Reference
+
+    if ($correlatedAccount.Count -eq 1) {
+        $correlatedAccount = $correlatedAccount[0]
+        if ([string]::IsNullOrWhiteSpace([string]$correlatedAccount.UsId)) {
+            throw 'Correlated AFAS user is missing required identifier [Gebruiker/UsId]. Verify the AFAS GetConnector output.'
+        }
+
+        # AFAS dependency: Profit Windows cannot be enabled while InSite is inactive. Report this
+        # instead of enabling InSite, because that would grant a permission that was not requested.
+        if ($permissionReference -eq 'Awin' -and -not [bool]$correlatedAccount.InSi) {
+            throw "Permission [$permissionReference] can only be granted when permission [InSi] is active. Grant [InSite access] first."
+        }
+
+        $lifecycleProcess = 'GrantPermission'
+    }
+    else {
+        $lifecycleProcess = 'NotFound'
+    }
+
+    # Process
+    switch ($lifecycleProcess) {
+        'GrantPermission' {
+            # Nm is mandatory; fall back to UsId when AFAS has no name on file.
+            $userDescription = [string]$correlatedAccount.Nm
+            if ([string]::IsNullOrWhiteSpace($userDescription)) {
+                $userDescription = [string]$correlatedAccount.UsId
+            }
+
+            # Mandatory fields
+            $fieldsToUpdate = [ordered]@{
+                Nm   = $userDescription
+                MtCd = 1 # Import without changing the block status
+            }
+            $fieldsToUpdate[$permissionReference] = 'true'
+
+            $updateAccount = [PSCustomObject]@{
+                KnUser = @{
+                    Element = @{
+                        '@UsId' = $correlatedAccount.UsId
+                        Fields  = $fieldsToUpdate
+                    }
+                }
+            }
+
+            $body = ($updateAccount | ConvertTo-Json -Depth 10)
+            $splatUpdateParams = @{
+                Uri             = "$($actionContext.Configuration.BaseUri)/connectors/$($actionContext.Configuration.UpdateConnector)"
+                Headers         = $headers
+                Method          = 'PUT'
+                Body            = ([System.Text.Encoding]::UTF8.GetBytes($body))
+                ContentType     = 'application/json;charset=utf-8'
+                UseBasicParsing = $true
+                ErrorAction     = 'Stop'
+            }
+
+            if (-not($actionContext.DryRun -eq $true)) {
+                Write-Information "Granting AFAS Profit permission: [$($actionContext.PermissionDisplayName)] - [$permissionReference]"
+                $null = Invoke-RestMethod @splatUpdateParams -Verbose:$false
+
+                $auditLogMessage = "Granted permission [$($actionContext.PermissionDisplayName)]."
+            }
+            else {
+                Write-Information "[DryRun] Grant AFAS Profit permission: [$($actionContext.PermissionDisplayName)] - [$permissionReference], will be executed during enforcement"
+                $auditLogMessage = "[DryRun] Would grant permission [$($actionContext.PermissionDisplayName)]."
+            }
+
+            $outputContext.Success = $true
+            $outputContext.AuditLogs.Add([PSCustomObject]@{
+                    Message = $auditLogMessage
+                    IsError = $false
+                })
+            break
+        }
+
+        'NotFound' {
+            Write-Information "AFAS Profit account: [$($actionContext.References.Account)] could not be found, indicating that it may have been deleted"
+            $outputContext.Success = $false
+            $outputContext.AuditLogs.Add([PSCustomObject]@{
+                    Message = "AFAS Profit account: [$($actionContext.References.Account)] could not be found, indicating that it may have been deleted"
+                    IsError = $true
+                })
+            break
+        }
+    }
+}
+catch {
+    $outputContext.Success = $false
+    $ex = $PSItem
+    if ($($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or
+        $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
+        $errorObj = Resolve-AFASProfitError -ErrorObject $ex
+        $auditLogMessage = "Could not grant AFAS Profit permission for account: [$($actionContext.References.Account)]. Error: $($errorObj.FriendlyMessage)"
+        Write-Warning "Error at Line '$($errorObj.ScriptLineNumber)': $($errorObj.Line). Error: $($errorObj.ErrorDetails)"
+    }
+    else {
+        $auditLogMessage = "Could not grant AFAS Profit permission for account: [$($actionContext.References.Account)]. Error: $($ex.Exception.Message)"
+        Write-Warning "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($ex.Exception.Message)"
+    }
+    $outputContext.AuditLogs.Add([PSCustomObject]@{
+            Message = $auditLogMessage
+            IsError = $true
+        })
+}

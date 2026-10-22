@@ -1,152 +1,79 @@
-#####################################################
+#################################################
 # HelloID-Conn-Prov-Target-AFAS-Profit-Users-Create
 # PowerShell V2
-#####################################################
-
-# Set to false at start, at the end, only when no error occurs it is set to true
-$outputContext.Success = $false 
-
-# AccountReference must have a value for dryRun
-$outputContext.AccountReference = "Unknown"
-
-# Set debug logging
-switch ($($actionContext.Configuration.isDebug)) {
-    $true { $VerbosePreference = 'Continue' }
-    $false { $VerbosePreference = 'SilentlyContinue' }
-}
+#################################################
 
 # Enable TLS1.2
 [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor [System.Net.SecurityProtocolType]::Tls12
 
 #region functions
-function Resolve-HTTPError {
+function Resolve-AFASProfitError {
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory,
-            ValueFromPipeline
-        )]
-        [object]$ErrorObject
+        [Parameter(Mandatory)]
+        [object]
+        $ErrorObject
     )
     process {
         $httpErrorObj = [PSCustomObject]@{
-            FullyQualifiedErrorId = $ErrorObject.FullyQualifiedErrorId
-            MyCommand             = $ErrorObject.InvocationInfo.MyCommand
-            RequestUri            = $ErrorObject.TargetObject.RequestUri
-            ScriptStackTrace      = $ErrorObject.ScriptStackTrace
-            ErrorMessage          = ''
+            ScriptLineNumber = $ErrorObject.InvocationInfo.ScriptLineNumber
+            Line             = $ErrorObject.InvocationInfo.Line
+            ErrorDetails     = $ErrorObject.Exception.Message
+            FriendlyMessage  = $ErrorObject.Exception.Message
         }
-        if ($ErrorObject.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') {
-            $httpErrorObj.ErrorMessage = $ErrorObject.ErrorDetails.Message
+        if (-not [string]::IsNullOrEmpty($ErrorObject.ErrorDetails.Message)) {
+            $httpErrorObj.ErrorDetails = $ErrorObject.ErrorDetails.Message
         }
         elseif ($ErrorObject.Exception.GetType().FullName -eq 'System.Net.WebException') {
-            $httpErrorObj.ErrorMessage = [System.IO.StreamReader]::new($ErrorObject.Exception.Response.GetResponseStream()).ReadToEnd()
+            if ($null -ne $ErrorObject.Exception.Response) {
+                $streamReaderResponse = [System.IO.StreamReader]::new($ErrorObject.Exception.Response.GetResponseStream()).ReadToEnd()
+                if (-not [string]::IsNullOrEmpty($streamReaderResponse)) {
+                    $httpErrorObj.ErrorDetails = $streamReaderResponse
+                }
+            }
+        }
+        try {
+            $errorDetailsObject = ($httpErrorObj.ErrorDetails | ConvertFrom-Json)
+            if ($null -ne $errorDetailsObject.externalMessage) {
+                $httpErrorObj.FriendlyMessage = $errorDetailsObject.externalMessage
+            }
+            else {
+                $httpErrorObj.FriendlyMessage = $errorDetailsObject
+            }
+        }
+        catch {
+            $httpErrorObj.FriendlyMessage = "[$($httpErrorObj.ErrorDetails)]"
         }
         Write-Output $httpErrorObj
     }
 }
-
-function Resolve-AFASErrorMessage {
-    [CmdletBinding()]
-    param (
-        [Parameter(Mandatory,
-            ValueFromPipeline
-        )]
-        [object]$ErrorObject
-    )
-    process {
-        try {
-            $errorObjectConverted = $ErrorObject | ConvertFrom-Json -ErrorAction Stop
-
-            if ($null -ne $errorObjectConverted.externalMessage) {
-                $errorMessage = $errorObjectConverted.externalMessage
-            }
-            else {
-                $errorMessage = $errorObjectConverted
-            }
-        }
-        catch {
-            $errorMessage = "$($ErrorObject.Exception.Message)"
-        }
-
-        Write-Output $errorMessage
-    }
-}
-
-function Get-ErrorMessage {
-    [CmdletBinding()]
-    param (
-        [Parameter(Mandatory,
-            ValueFromPipeline
-        )]
-        [object]$ErrorObject
-    )
-    process {
-        $errorMessage = [PSCustomObject]@{
-            VerboseErrorMessage = $null
-            AuditErrorMessage   = $null
-        }
-
-        if ( $($ErrorObject.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or $($ErrorObject.Exception.GetType().FullName -eq 'System.Net.WebException')) {
-            $httpErrorObject = Resolve-HTTPError -ErrorObject $ErrorObject
-
-            if (-not[String]::IsNullOrEmpty($httpErrorObject.ErrorMessage)) {
-                $errorMessage.VerboseErrorMessage = $httpErrorObject.ErrorMessage
-                $errorMessage.AuditErrorMessage = Resolve-AFASErrorMessage -ErrorObject $httpErrorObject.ErrorMessage
-            }
-            else {
-                $errorMessage.VerboseErrorMessage = $ErrorObject.Exception.Message
-                $errorMessage.AuditErrorMessage = $ErrorObject.Exception.Message
-            }
-        }
-
-        # If error message empty, fall back on $ex.Exception.Message
-        if ([String]::IsNullOrEmpty($errorMessage.VerboseErrorMessage)) {
-            $errorMessage.VerboseErrorMessage = $ErrorObject.Exception.Message
-        }
-        if ([String]::IsNullOrEmpty($errorMessage.AuditErrorMessage)) {
-            $errorMessage.AuditErrorMessage = $ErrorObject.Exception.Message
-        }
-
-        Write-Output $errorMessage
-    }
-}
-#endregion functions
+#endregion
 
 try {
-    $account = $actionContext.Data
-    $exportData = $account.PsObject.Copy()
+    # Initial Assignments
+    $outputContext.AccountReference = 'Currently not available'
+    $createUserEnabled = [bool]$actionContext.Configuration.CreateUser
 
-    # Remove field because only used for export data or to set correlation
-    if ($account.PSObject.Properties.Name -Contains 'Gebruiker') {
-        $account.PSObject.Properties.Remove('Gebruiker')
-    }
-    if ($account.PSObject.Properties.Name -Contains 'Medewerker') {
-        $account.PSObject.Properties.Remove('Medewerker')
-    }
-
+    # Validate correlation configuration
     if ($actionContext.CorrelationConfiguration.Enabled) {
-        $correlationProperty = $actionContext.CorrelationConfiguration.accountField
-        $correlationValue = $actionContext.CorrelationConfiguration.accountFieldValue
-    
-        if ([string]::IsNullOrEmpty($correlationProperty)) {
-            Write-Warning "Correlation is enabled but not configured correctly."
-            throw "Correlation is enabled but not configured correctly."
-        }
-    
-        if ([string]::IsNullOrEmpty($correlationValue)) {
-            Write-Warning "The correlation value for [$correlationProperty] is empty. This is likely a scripting issue."
-            throw "The correlation value for [$correlationProperty] is empty. This is likely a scripting issue."
-        }
-    }
-    else {
-        Write-Warning "Correlation is enabled but not configured correctly."
-        throw "Configuration of correlation is mandatory."
-    }
+        $correlationField = $actionContext.CorrelationConfiguration.AccountField
+        $correlationValue = $actionContext.CorrelationConfiguration.PersonFieldValue
 
-    # Get current account and verify if the action should be either [updated and correlated] or just [correlated]
-    try {
-        Write-Verbose "Querying AFAS user where [$($correlationProperty)] = [$($correlationValue)]"
+        if ([string]::IsNullOrEmpty($($correlationField))) {
+            throw 'Correlation is enabled but not configured correctly'
+        }
+        if ([string]::IsNullOrEmpty($($correlationValue))) {
+            throw 'Correlation is enabled but [accountFieldValue] is empty. Please make sure it is correctly mapped'
+        }
 
+        # AFAS splits [filtervalues] on the comma. A comma in the value silently shifts all following filter values, which returns a wrong match instead of an error. EscapeDataString does not cover this.
+        if ($correlationValue -match '[,;]') {
+            throw "Correlation value [$correlationValue] contains a comma or semicolon, which cannot be used in AFAS [filtervalues]"
+        }
+
+        # Determine if a user needs to be [created] or [correlated]
+        Write-Information "Verifying if a AFAS Profit Users account exists where $correlationField is: [$correlationValue]"
+        
         # Create authorization headers using OAuth client credentials
         $tokenUri = "$($actionContext.Configuration.BaseUri)/oauth/token"
         Write-Verbose "Requesting OAuth access token from [$tokenUri]"
@@ -157,7 +84,7 @@ try {
             client_secret = $actionContext.Configuration.ClientSecret
         }
 
-        $tokenResponse = Invoke-RestMethod -Method Post -Uri $tokenUri -Body $tokenRequestBody -ContentType 'application/x-www-form-urlencoded' -UseBasicParsing -Verbose:$false
+        $tokenResponse = Invoke-RestMethod -Method Post -Uri $tokenUri -Body $tokenRequestBody -ContentType 'application/x-www-form-urlencoded' -UseBasicParsing -ErrorAction Stop -Verbose:$false
 
         if ([String]::IsNullOrWhiteSpace([String]$tokenResponse.access_token)) {
             throw "OAuth token endpoint did not return an access_token."
@@ -167,155 +94,185 @@ try {
             throw "OAuth token endpoint returned an unexpected token_type [$($tokenResponse.token_type)]. Expected [Bearer]."
         }
 
-        $Headers = @{ Authorization = "$($tokenResponse.token_type) $($tokenResponse.access_token)" }
-        $Headers.Add("IntegrationId", "45963_140664") # Fixed value - Tools4ever Partner Integration ID
+        $headers = @{
+            Authorization = "$($tokenResponse.token_type) $($tokenResponse.access_token)"
+            IntegrationId = '45963_140664' # Fixed value - Tools4ever Partner Integration ID
+        }
 
-        $splatWebRequest = @{
-            Uri             = "$($actionContext.Configuration.BaseUri)/connectors/$($actionContext.Configuration.GetConnector)?filterfieldids=$($correlationProperty)&filtervalues=$($correlationValue)&operatortypes=1"
-            Headers         = $headers
+        $notEmptyFilterValue = [uri]::EscapeDataString('[is niet leeg]')
+        $splatQueryParams = @{
+            Uri             = "$($actionContext.Configuration.BaseUri)/connectors/$($actionContext.Configuration.GetConnector)?filterfieldids=$($correlationField),BcCo&filtervalues=$([uri]::EscapeDataString($correlationValue)),$notEmptyFilterValue&operatortypes=1,9"
             Method          = 'GET'
+            Headers         = $headers
             ContentType     = "application/json;charset=utf-8"
             UseBasicParsing = $true
+            ErrorAction     = 'Stop'
         }
-        $currentAccount = (Invoke-RestMethod @splatWebRequest -Verbose:$false).rows
 
-        if ($null -eq $currentAccount.Gebruiker) {
-            if ($($actionContext.Configuration.createUser) -eq $true) {
-                Write-Verbose "No AFAS user found where [$($correlationProperty)] = [$($correlationValue)]. Creating new user"
+        $correlatedAccount = @((Invoke-RestMethod @splatQueryParams).rows)
+    }
+    else {
+        throw 'Correlation is not enabled but this connector only supports correlation.'
+    }
+
+    if ($correlatedAccount.Count -eq 0) {
+        $lifecycleProcess = 'NotFound'
+    }
+    elseif ($correlatedAccount.Count -eq 1) {
+        $correlatedAccount = $correlatedAccount[0]
+        if ([string]::IsNullOrWhiteSpace([string]$correlatedAccount.UsId)) {
+            if ($createUserEnabled) {
+                $lifecycleProcess = 'CreateAccount'
             }
             else {
-                throw "No AFAS user found where [$($correlationProperty)] = [$($correlationValue)] and [create user when not found in AFAS] set to [$($actionContext.Configuration.createUser)]"
+                $lifecycleProcess = 'CreateNotEnabled'
             }
         }
         else {
-            $aRef = [PSCustomObject]@{
-                Gebruiker = $currentAccount.Gebruiker
-            }
-
-            $outputContext.AccountReference = $aRef
-
-            $outputContext.AuditLogs.Add([PSCustomObject]@{
-                    Action  = "CorrelateAccount"
-                    Message = "Successfully correlated to AFAS user [$($currentAccount.Gebruiker)]"
-                    IsError = $false
-                })
-            $outputContext.AccountCorrelated = $true    
+            $lifecycleProcess = 'CorrelateAccount'
         }
     }
-    catch {
-        $ex = $PSItem
-        $errorMessage = Get-ErrorMessage -ErrorObject $ex
+    elseif ($correlatedAccount.Count -gt 1) {
+        throw "Multiple accounts found for person where $correlationField is: [$correlationValue]"
+    }    
 
-        Write-Verbose "Error at Line [$($ex.InvocationInfo.ScriptLineNumber)]: $($ex.InvocationInfo.Line). Error: $($errorMessage.VerboseErrorMessage)"
+    # Process
+    switch ($lifecycleProcess) {
+        'CreateAccount' {
+            $newUsId = [string]$actionContext.Data.UsId
 
-        $outputContext.AuditLogs.Add([PSCustomObject]@{
-                Action  = "CreateAccount"
-                Message = "Error querying AFAS user where [$($correlationProperty)] = [$($correlationValue)]. Error Message: $($errorMessage.AuditErrorMessage)"
-                IsError = $true
-            })
-        
-        # Skip further actions, as this is a critical error
-        throw "Error querying AFAS user"
-    }
+            # Nm is the user description. A Medewerker without UsId has no description yet, while AFAS requires it.
+            $userDescription = [string]$correlatedAccount.Nm
+            if ([string]::IsNullOrWhiteSpace($userDescription)) {
+                $userDescription = $newUsId
+            }
 
-    # Only create
-    if (!$outputContext.AccountCorrelated) { 
-        # Create AFAS User
-        try {
-            # Create custom account object for create and set with default properties and values
+            # Build a base payload with permission-related flags managed by the script.
+            $fieldsToCreate = [ordered]@{
+                BcCo = [string]$correlatedAccount.BcCo
+                Nm   = $userDescription
+                MtCd = 1
+                Acon = 'false'
+                Abac = 'false'
+                Acom = 'false'
+                InSi = 'false'
+            }
+
+            # UsId is sent as element key, EmId is a GetConnector correlation field only. Both are not valid KnUser fields and are rejected by AFAS when present in the payload.
+            # BcCo should never be updated by HelloID.
+            $fieldsToExcludeFromPayload = @('UsId', 'EmId', 'BcCo')
+
+            # Add/overwrite remaining fields from mapping data.
+            foreach ($property in $actionContext.Data.PSObject.Properties) {
+                if ($property.Name -notin $fieldsToExcludeFromPayload) {
+                    $fieldsToCreate[$property.Name] = $property.Value
+                }
+            }
+
             $createAccount = [PSCustomObject]@{
-                'KnUser' = @{
-                    'Element' = @{
-                        # Gebruiker
-                        '@UsId'  = $account.UsId
-                        'Fields' = @{
-                            # Nummer
-                            'BcCo' = $currentAccount.Persoonsnummer
-                        }
+                KnUser = @{
+                    Element = @{
+                        '@UsId' = $newUsId
+                        Fields  = $fieldsToCreate
                     }
                 }
             }
 
-            # Add all account properties to the custom account object for create - Except for UsId as it is set at a different level
-            foreach ($accountProperty in $account.PSObject.Properties | Where-Object { $_.Name -ne 'UsId' }) {
-                $createAccount.KnUser.Element.Fields.$($accountProperty.Name) = $accountProperty.Value
-            }
-
             $body = ($createAccount | ConvertTo-Json -Depth 10)
-            $splatWebRequest = @{
+            $fieldsInPayload = ($fieldsToCreate.Keys | ForEach-Object { [string]$_ }) -join ', '
+            $splatCreateParams = @{
                 Uri             = "$($actionContext.Configuration.BaseUri)/connectors/$($actionContext.Configuration.UpdateConnector)"
+                Method          = 'POST'
                 Headers         = $headers
-                Method          = 'PUT'
                 Body            = ([System.Text.Encoding]::UTF8.GetBytes($body))
-                ContentType     = "application/json;charset=utf-8"
+                ContentType     = 'application/json;charset=utf-8'
                 UseBasicParsing = $true
+                ErrorAction     = 'Stop'
             }
 
-            if (-Not($actionContext.DryRun -eq $true)) {
-                Write-Verbose "Creating AFAS user [$($account.UsId)]. Account object: $($createAccount | ConvertTo-Json -Depth 10)" 
+            if (-not($actionContext.DryRun -eq $true)) {
+                Write-Information "Creating and correlating AFAS account [$newUsId]. Fields in create payload: [$fieldsInPayload]"
+                $null = Invoke-RestMethod @splatCreateParams -Verbose:$false
 
-                $createdAccount = Invoke-RestMethod @splatWebRequest -Verbose:$false
+                $outputContext.Data = $actionContext.Data | Select-Object -Property $outputContext.Data.PSObject.Properties.Name
+                $outputContext.AccountReference = [string]$fieldsToCreate['BcCo']
 
-                # Set aRef object for use in futher actions
-                $aRef = [PSCustomObject]@{
-                    Gebruiker = $account.UsId
-                }
-
-                $outputContext.AccountReference = $aRef
-
-                # Add correlation property to exportdata
-                $exportData | Add-Member -MemberType NoteProperty -Name $correlationProperty -Value $correlationValue -Force
-                # Add aRef properties to exportdata
-                foreach ($aRefProperty in $aRef.PSObject.Properties) {
-                    $exportData | Add-Member -MemberType NoteProperty -Name $aRefProperty.Name -Value $aRefProperty.Value -Force
-                }
-
-                $outputContext.AuditLogs.Add([PSCustomObject]@{
-                        Action  = "CreateAccount"
-                        Message = "Successfully created AFAS user [$($account.UsId)]"
-                        IsError = $false
-                    })
+                $auditLogMessage = "Created and correlated AFAS account with accountReference: [$($outputContext.AccountReference)]. Create payload fields: [$fieldsInPayload]"
             }
             else {
-                Write-Warning "DryRun: Would create AFAS user [$($account.UsId)]. Account object: $($createAccount | ConvertTo-Json -Depth 10)"
+                Write-Information "[DryRun] Create and correlate AFAS account [$newUsId], will be executed during enforcement. Fields in create payload: [$fieldsInPayload]"
+                $outputContext.Data = $actionContext.Data | Select-Object -Property $outputContext.Data.PSObject.Properties.Name
+                $outputContext.AccountReference = [string]$fieldsToCreate['BcCo']
+                $auditLogMessage = "[DryRun] Would create and correlate AFAS account with accountReference: [$($outputContext.AccountReference)]. Create payload fields: [$fieldsInPayload]"
             }
-        }
-        catch {
-            $ex = $PSItem
-            $errorMessage = Get-ErrorMessage -ErrorObject $ex
-                        
-            Write-Verbose "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($errorMessage.VerboseErrorMessage)"
-                    
+
+            $outputContext.success = $true
             $outputContext.AuditLogs.Add([PSCustomObject]@{
-                    Action  = "CreateAccount"
-                    Message = "Error creating AFAS user [$($account.UsId)]. Error Message: $($errorMessage.AuditErrorMessage)."
+                    Action  = 'CreateAccount'
+                    Message = $auditLogMessage
+                    IsError = $false
+                })
+            break
+        }
+
+        'CreateNotEnabled' {
+            $auditLogMessage = "Correlated AFAS account has no UsId for [$($correlationField)] = [$($correlationValue)], but configuration [CreateUser] is disabled."
+            Write-Information $auditLogMessage
+
+            $outputContext.Success = $false
+            $outputContext.AuditLogs.Add([PSCustomObject]@{
+                    Action  = 'CorrelateAccount'
+                    Message = $auditLogMessage
                     IsError = $true
                 })
+            break
+        }
 
-            # Skip further actions, as this is a critical error
-            throw "Error creating AFAS user"
+        'CorrelateAccount' {
+            Write-Information "Correlating AFAS account [$($correlatedAccount.UsId)]"
+
+            $outputContext.Data = $correlatedAccount | Select-Object -Property $outputContext.Data.PSObject.Properties.Name
+            $outputContext.AccountReference = [string]$correlatedAccount.BcCo
+            $outputContext.AccountCorrelated = $true
+            $outputContext.success = $true
+            $auditLogMessage = "Correlated account: [$($outputContext.AccountReference)] on field: [$($correlationField)] with value: [$($correlationValue)]"
+            $outputContext.AuditLogs.Add([PSCustomObject]@{
+                    Action  = 'CorrelateAccount'
+                    Message = $auditLogMessage
+                    IsError = $false
+                })
+            break
+        }
+
+        'NotFound' {
+            $auditLogMessage = "No AFAS account found where [$($correlationField)] = [$($correlationValue)]. Cannot create user without correlated person number [BcCo]."
+            Write-Information $auditLogMessage
+
+            $outputContext.Success = $false
+            $outputContext.AuditLogs.Add([PSCustomObject]@{
+                    Action  = 'CreateAccount'
+                    Message = $auditLogMessage
+                    IsError = $true
+                })
+            break
         }
     }
 }
 catch {
+    $outputContext.success = $false
     $ex = $PSItem
-    if ((-Not($ex.Exception.Message -eq 'Error querying AFAS user')) -and (-Not($ex.Exception.Message -eq 'Error creating AFAS user'))) {
-    
-        $outputContext.AuditLogs.Add([PSCustomObject]@{
-                Action  = "CreateAccount"
-                Message = "$($ex.Exception.Message)"
-                IsError = $true
-            })
-    } 
+    if ($($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or
+        $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
+        $errorObj = Resolve-AFASProfitError -ErrorObject $ex
+        $auditLogMessage = "Could not create or correlate AFAS-Profit account: [$($actionContext.References.Account)]. Error: $($errorObj.FriendlyMessage)"
+        Write-Warning "Error at Line '$($errorObj.ScriptLineNumber)': $($errorObj.Line). Error: $($errorObj.ErrorDetails)"
+    }
     else {
-        Write-Verbose "ERROR: $ex"
+        $auditLogMessage = "Could not create or correlate AFAS-Profit account: [$($actionContext.References.Account)]. Error: $($ex.Exception.Message)"
+        Write-Warning "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($ex.Exception.Message)"
     }
-}
-finally {
-    # Check if auditLogs contains errors, if no errors are found, set success to true
-    if (-NOT($outputContext.AuditLogs.IsError -contains $true)) {
-        $outputContext.Success = $true
-    }
-
-    $outputContext.Data = $exportData
+    $outputContext.AuditLogs.Add([PSCustomObject]@{
+            Message = $auditLogMessage
+            IsError = $true
+        })
 }

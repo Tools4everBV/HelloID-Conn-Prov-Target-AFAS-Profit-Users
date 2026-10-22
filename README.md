@@ -40,7 +40,7 @@ _HelloID-Conn-Prov-Target-AFAS-Profit-Users_ is a _target_ connector. _AFAS-Prof
 The following features are available:
 
 | Feature                                   | Supported | Actions                                 | Remarks |
-| ----------------------------------------- | --------- | --------------------------------------- | ------- |
+|-------------------------------------------|-----------|-----------------------------------------|---------|
 | **Account Lifecycle**                     | ✅         | Create, Update, Enable, Disable, Delete |         |
 | **Permissions**                           | ❌         | -                                       |         |
 | **Resources**                             | ❌         | -                                       |         |
@@ -90,7 +90,7 @@ https://raw.githubusercontent.com/Tools4everBV/HelloID-Conn-Prov-Target-AFAS-Pro
 The following settings are required to connect to the API.
 
 | Setting                       | Description                                                                                                                                                                           | Mandatory |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+|-------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------|
 | Base Uri                      | The URL to the AFAS environment REST services                                                                                                                                         | Yes       |
 | Client ID                     | The OAuth client id of the AppConnector                                                                                                                                               | Yes       |
 | Client Secret                 | The OAuth client secret of the AppConnector                                                                                                                                           | Yes       |
@@ -106,7 +106,7 @@ The following settings are required to connect to the API.
 The data collection retrieved by the set of GetConnectors is sufficient for HelloID to provision persons. The data collection can be changed by the customer itself to meet their requirements.
 
 | Connector                                       | Field               | Default filter            |
-| ----------------------------------------------- | ------------------- | ------------------------- |
+|-------------------------------------------------|---------------------|---------------------------|
 | __Tools4ever - HelloID - T4E_HelloID_Users_v2__ | contract start date | <[Vandaag + 3 maanden]    |
 |                                                 | contract end date   | >[Vandaag - 3 maanden];[] |
 
@@ -115,10 +115,10 @@ The data collection retrieved by the set of GetConnectors is sufficient for Hell
 The correlation configuration is used to specify which properties will be used to match an existing account within _AFAS Profit_ to a person in _HelloID_.
 
 | Setting                   | Value                             |
-| ------------------------- | --------------------------------- |
+|---------------------------|-----------------------------------|
 | Enable correlation        | `True`                            |
 | Person correlation field  | `PersonContext.Person.ExternalId` |
-| Account correlation field | `Medewerker`                      |
+| Account correlation field | `EmId`                            |
 
 > [!TIP]
 > _For more information on correlation, please refer to our correlation [documentation](https://docs.helloid.com/en/provisioning/target-systems/powershell-v2-target-systems/correlation.html) pages_.
@@ -132,7 +132,7 @@ The field mapping can be imported by using the [_fieldMapping.json_](./fieldMapp
 
 ### Account Reference
 
-The account reference is populated with the `UsId` property from _AFAS Profit_.
+The account reference is populated with the `BcCo` property (person number) from _AFAS Profit_. The `UsId` property is used to identify the user in AFAS update requests.
 
 ## Remarks
 
@@ -147,6 +147,9 @@ The account reference is populated with the `UsId` property from _AFAS Profit_.
 
 > [!IMPORTANT]
 > **Profit Windows** is a required field when creating a user. If this field is not mapped, the default value is `true`. Enabling Profit Windows will automatically enable both InSite and Pocket.
+
+> [!IMPORTANT]
+> When using the permissions of this connector, set the **concurrent actions** of the target system to `1`. The AFAS `KnUser` update connector updates the user as a whole, so two simultaneous mutations on the same user will clash and can overwrite each other's changes.
 
 ### Enable / Disable
 
@@ -170,7 +173,7 @@ The account reference is populated with the `UsId` property from _AFAS Profit_.
 The following endpoints are used by the connector.
 
 | Endpoint                      | HTTP Method | Description                        |
-| ----------------------------- | ----------- | ---------------------------------- |
+|-------------------------------|-------------|------------------------------------|
 | profitrestservices/connectors | GET         | Retrieve user information          |
 | profitrestservices/connectors | PUT         | Create and update user information |
 

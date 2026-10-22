@@ -6,106 +6,54 @@
 # Enable TLS1.2
 [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor [System.Net.SecurityProtocolType]::Tls12
 
-function Resolve-HTTPError {
+#region functions
+function Resolve-AFASProfitError {
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory,
-            ValueFromPipeline
-        )]
-        [object]$ErrorObject
+        [Parameter(Mandatory)]
+        [object]
+        $ErrorObject
     )
     process {
         $httpErrorObj = [PSCustomObject]@{
-            FullyQualifiedErrorId = $ErrorObject.FullyQualifiedErrorId
-            MyCommand             = $ErrorObject.InvocationInfo.MyCommand
-            RequestUri            = $ErrorObject.TargetObject.RequestUri
-            ScriptStackTrace      = $ErrorObject.ScriptStackTrace
-            ErrorMessage          = ''
+            ScriptLineNumber = $ErrorObject.InvocationInfo.ScriptLineNumber
+            Line             = $ErrorObject.InvocationInfo.Line
+            ErrorDetails     = $ErrorObject.Exception.Message
+            FriendlyMessage  = $ErrorObject.Exception.Message
         }
-        if ($ErrorObject.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') {
-            $httpErrorObj.ErrorMessage = $ErrorObject.ErrorDetails.Message
+        if (-not [string]::IsNullOrEmpty($ErrorObject.ErrorDetails.Message)) {
+            $httpErrorObj.ErrorDetails = $ErrorObject.ErrorDetails.Message
         }
         elseif ($ErrorObject.Exception.GetType().FullName -eq 'System.Net.WebException') {
-            $httpErrorObj.ErrorMessage = [System.IO.StreamReader]::new($ErrorObject.Exception.Response.GetResponseStream()).ReadToEnd()
+            if ($null -ne $ErrorObject.Exception.Response) {
+                $streamReaderResponse = [System.IO.StreamReader]::new($ErrorObject.Exception.Response.GetResponseStream()).ReadToEnd()
+                if (-not [string]::IsNullOrEmpty($streamReaderResponse)) {
+                    $httpErrorObj.ErrorDetails = $streamReaderResponse
+                }
+            }
         }
-        Write-Output $httpErrorObj
-    }
-}
-
-function Resolve-AFASErrorMessage {
-    [CmdletBinding()]
-    param (
-        [Parameter(Mandatory,
-            ValueFromPipeline
-        )]
-        [object]$ErrorObject
-    )
-    process {
         try {
-            $errorObjectConverted = $ErrorObject | ConvertFrom-Json -ErrorAction Stop
-
-            if ($null -ne $errorObjectConverted.externalMessage) {
-                $errorMessage = $errorObjectConverted.externalMessage
+            $errorDetailsObject = ($httpErrorObj.ErrorDetails | ConvertFrom-Json)
+            if ($null -ne $errorDetailsObject.externalMessage) {
+                $httpErrorObj.FriendlyMessage = $errorDetailsObject.externalMessage
             }
             else {
-                $errorMessage = $errorObjectConverted
+                $httpErrorObj.FriendlyMessage = $errorDetailsObject
             }
         }
         catch {
-            $errorMessage = "$($ErrorObject.Exception.Message)"
+            $httpErrorObj.FriendlyMessage = "[$($httpErrorObj.ErrorDetails)]"
         }
-
-        Write-Output $errorMessage
-    }
-}
-
-function Get-ErrorMessage {
-    [CmdletBinding()]
-    param (
-        [Parameter(Mandatory,
-            ValueFromPipeline
-        )]
-        [object]$ErrorObject
-    )
-    process {
-        $errorMessage = [PSCustomObject]@{
-            VerboseErrorMessage = $null
-            AuditErrorMessage   = $null
-        }
-
-        if ( $($ErrorObject.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or $($ErrorObject.Exception.GetType().FullName -eq 'System.Net.WebException')) {
-            $httpErrorObject = Resolve-HTTPError -ErrorObject $ErrorObject
-            
-            if (-not[String]::IsNullOrEmpty($httpErrorObject.ErrorMessage)) {
-                $errorMessage.VerboseErrorMessage = $httpErrorObject.ErrorMessage
-                $errorMessage.AuditErrorMessage = Resolve-AFASErrorMessage -ErrorObject $httpErrorObject.ErrorMessage
-            }
-            else {
-                $errorMessage.VerboseErrorMessage = $ErrorObject.Exception.Message
-                $errorMessage.AuditErrorMessage = $ErrorObject.Exception.Message
-            }
-        }
-        
-        # If error message empty, fall back on $ex.Exception.Message
-        if ([String]::IsNullOrEmpty($errorMessage.VerboseErrorMessage)) {
-            $errorMessage.VerboseErrorMessage = $ErrorObject.Exception.Message
-        }
-        if ([String]::IsNullOrEmpty($errorMessage.AuditErrorMessage)) {
-            $errorMessage.AuditErrorMessage = $ErrorObject.Exception.Message
-        }
-
-        Write-Output $errorMessage
+        Write-Output $httpErrorObj
     }
 }
 #endregion functions
 
 try {
-    Write-Information 'Starting AFAS Users account entitlement import'
-   
     #Filter - Determine what defines an account entitlement, copy from AFAS Connect cURL
-    $Filter = "filterfieldids=Gebruiker&filtervalues=%5Bis%20niet%20leeg%5D&operatortypes=9"
+    $Filter = "filterfieldids=UsId&filtervalues=%5Bis%20niet%20leeg%5D&operatortypes=9"
 
-    Write-Verbose "Starting downloading objects through get-connector [$($actionContext.Configuration.GetConnector)]"
+    Write-Information "Starting AFAS Users account entitlement import through get-connector [$($actionContext.Configuration.GetConnector)]"
 
     # Create authorization headers using OAuth client credentials
     $tokenUri = "$($actionContext.Configuration.BaseUri)/oauth/token"
@@ -117,65 +65,58 @@ try {
         client_secret = $actionContext.Configuration.ClientSecret
     }
 
-    $tokenResponse = Invoke-RestMethod -Method Post -Uri $tokenUri -Body $tokenRequestBody -ContentType 'application/x-www-form-urlencoded' -UseBasicParsing -Verbose:$false
+    $tokenResponse = Invoke-RestMethod -Method Post -Uri $tokenUri -Body $tokenRequestBody -ContentType 'application/x-www-form-urlencoded' -UseBasicParsing -ErrorAction Stop -Verbose:$false
 
     if ([String]::IsNullOrWhiteSpace([String]$tokenResponse.access_token)) {
-        throw "OAuth token endpoint did not return an access_token."
+        throw 'OAuth token endpoint did not return an access_token.'
     }
 
     if ([String]::IsNullOrWhiteSpace([String]$tokenResponse.token_type) -or ([String]$tokenResponse.token_type).ToLowerInvariant() -ne 'bearer') {
         throw "OAuth token endpoint returned an unexpected token_type [$($tokenResponse.token_type)]. Expected [Bearer]."
     }
 
-    $Headers = @{ Authorization = "$($tokenResponse.token_type) $($tokenResponse.access_token)" }
-    $Headers.Add("IntegrationId", "45963_140664") # Fixed value - Tools4ever Partner Integration ID
+    $Headers = @{
+        Authorization = "$($tokenResponse.token_type) $($tokenResponse.access_token)"
+        IntegrationId = '45963_140664' # Fixed value - Tools4ever Partner Integration ID
+    }
 
     $take = 1000
     $skip = 0
+    $downloadedRecordCount = 0
+
+    $processedAccountReferences = [System.Collections.Generic.HashSet[string]]::new()
 
     do {
-        $uri = $($actionContext.Configuration.BaseUri) + "/connectors/" + $($actionContext.Configuration.GetConnector) + "?$Filter&skip=$skip&take=$take&orderbyfieldids=Medewerker"
-        $dataset = Invoke-RestMethod -Method Get -Uri $uri -Headers $Headers -UseBasicParsing
+        $uri = "$($actionContext.Configuration.BaseUri)/connectors/$($actionContext.Configuration.GetConnector)?$Filter&skip=$skip&take=$take&orderbyfieldids=UsId"
+        $dataset = Invoke-RestMethod -Method Get -Uri $uri -Headers $Headers -ContentType 'application/json;charset=utf-8' -UseBasicParsing -ErrorAction Stop
+        $downloadedRecordCount += @($dataset.rows).Count
 
         foreach ($importedAccount in $dataset.rows) {
+            if ([string]::IsNullOrWhiteSpace([string]$importedAccount.BcCo)) {
+                continue
+            }
+
+            # Log duplicates so they can be cleaned up in AFAS, but still return them and let HelloID handle it.
+            if (-not $processedAccountReferences.Add([string]$importedAccount.BcCo)) {
+                Write-Warning "AFAS user [$($importedAccount.UsId)] has person number [$($importedAccount.BcCo)], which is already used as account reference by another user. A person number must resolve to a single AFAS user."
+            }
+
             $data = @{}
-
-            if ($null -ne $($importedAccount.Email_werk_gebruiker)) {
-                $importedAccount | Add-Member -MemberType NoteProperty -Name "EmAd" -Value $($importedAccount.Email_werk_gebruiker) -Force
-            }
-
-            if ($null -ne $($importedAccount.Gebruiker)) {
-                $importedAccount | Add-Member -MemberType NoteProperty -Name "UsId" -Value $($importedAccount.Gebruiker) -Force
-            }
-
-            if ($null -ne $($importedAccount.InSite)) {
-                $importedAccount | Add-Member -MemberType NoteProperty -Name "Insi" -Value $($importedAccount.InSite) -Force
-            }
-
-            if ($null -ne $($importedAccount.OutSite)) {
-                $importedAccount | Add-Member -MemberType NoteProperty -Name "Site" -Value $($importedAccount.OutSite) -Force
-            }
-
             foreach ($field in $($actionContext.ImportFields)) {
                 $data[$field] = $importedAccount."$field"
             }
 
-            # Also append Medewerker for correlating user
-            $data["Medewerker"] = $importedAccount.Medewerker
-
-            # Determine Enabled status
-            $Enabled = $false
-
-            if (($importedAccount.Geblokkeerd -eq $false) -and ($importedAccount.InSite -eq $true)) {
-                $Enabled = $true
+            $displayName = [string]$importedAccount.Nm
+            if ([string]::IsNullOrWhiteSpace($displayName)) {
+                $displayName = [string]$importedAccount.UsId
             }
 
             # Return the result
             Write-Output @{
-                AccountReference = [PSCustomObject]@{ Gebruiker = $importedAccount.Gebruiker }
-                DisplayName      = $importedAccount.DisplayName
-                UserName         = $importedAccount.Gebruiker
-                Enabled          = $Enabled
+                AccountReference = [string]$importedAccount.BcCo
+                DisplayName      = $displayName.substring(0, [System.Math]::Min(100, $displayName.Length))
+                UserName         = $importedAccount.UsId
+                Enabled          = (-not [bool]$importedAccount.Bl)
                 Data             = $data
             }
         }
@@ -183,14 +124,18 @@ try {
         $skip += $take
     } while (@($dataset.rows).count -eq $take)
 
-    Write-Verbose "Downloaded records through get-connector [$($actionContext.Configuration.GetConnector)]"
-    
-    Write-Information 'AFAS Users account entitlement import completed'
+    Write-Information "AFAS Users account entitlement import completed. Downloaded [$downloadedRecordCount] records through get-connector [$($actionContext.Configuration.GetConnector)]"
 }
 catch {
     $ex = $PSItem
-    $errorMessage = Get-ErrorMessage -ErrorObject $ex
-
-    Write-Warning "Error at Line [$($ex.InvocationInfo.ScriptLineNumber)]: $($ex.InvocationInfo.Line). Error: $($errorMessage.VerboseErrorMessage)"
-    Write-Error "Could not import AFAS Users account entitlements. Error: $($errorMessage.VerboseErrorMessage)"
+    if ($($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or
+        $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
+        $errorObj = Resolve-AFASProfitError -ErrorObject $ex
+        Write-Warning "Error at Line '$($errorObj.ScriptLineNumber)': $($errorObj.Line). Error: $($errorObj.ErrorDetails)"
+        Write-Error "Could not import AFAS Users account entitlements. Error: $($errorObj.FriendlyMessage)"
+    }
+    else {
+        Write-Warning "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($ex.Exception.Message)"
+        Write-Error "Could not import AFAS Users account entitlements. Error: $($ex.Exception.Message)"
+    }
 }
