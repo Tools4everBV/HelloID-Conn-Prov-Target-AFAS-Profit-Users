@@ -195,11 +195,11 @@ try {
             if (-not($actionContext.DryRun -eq $true)) {
                 Write-Information "Deleting AFAS Profit account with accountReference: [$($actionContext.References.Account)]. Update payload fields: [$fieldsInPayload]"
                 $null = Invoke-RestMethod @splatUpdateParams -Verbose:$false
-                $auditLogMessage = "Delete AFAS Profit account with accountReference: [$($actionContext.References.Account)] was successful. Update payload fields: [$fieldsInPayload]. Action initiated by: [$($actionContext.Origin)]"
+                $auditLogMessage = "Delete AFAS Profit account with accountReference: [$($actionContext.References.Account)] was successful. Update payload fields: [$fieldsInPayload]"
             }
             else {
                 Write-Information "[DryRun] Delete AFAS Profit account with accountReference: [$($actionContext.References.Account)], will be executed during enforcement. Update payload fields: [$fieldsInPayload]"
-                $auditLogMessage = "[DryRun] Would delete AFAS Profit account with accountReference: [$($actionContext.References.Account)]. Update payload fields: [$fieldsInPayload]. Action initiated by: [$($actionContext.Origin)]"
+                $auditLogMessage = "[DryRun] Would delete AFAS Profit account with accountReference: [$($actionContext.References.Account)]. Update payload fields: [$fieldsInPayload]"
             }
 
             $outputContext.Success = $true
@@ -214,7 +214,7 @@ try {
             Write-Information "AFAS Profit account: [$($actionContext.References.Account)] could not be found, indicating that it may have been deleted"
             $outputContext.Success = $true
             $outputContext.AuditLogs.Add([PSCustomObject]@{
-                    Message = "AFAS Profit account: [$($actionContext.References.Account)] could not be found, indicating that it may have been deleted. Action initiated by: [$($actionContext.Origin)]"
+                    Message = "AFAS Profit account: [$($actionContext.References.Account)] could not be found, indicating that it may have been deleted"
                     IsError = $false
                 })
             break
@@ -227,11 +227,11 @@ catch {
     if ($($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or
         $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
         $errorObj = Resolve-AFASProfitError -ErrorObject $ex
-        $auditLogMessage = "Could not delete AFAS Profit account: [$($actionContext.References.Account)]. Error: $($errorObj.FriendlyMessage). Action initiated by: [$($actionContext.Origin)]"
+        $auditLogMessage = "Could not delete AFAS Profit account: [$($actionContext.References.Account)]. Error: $($errorObj.FriendlyMessage)"
         Write-Warning "Error at Line '$($errorObj.ScriptLineNumber)': $($errorObj.Line). Error: $($errorObj.ErrorDetails)"
     }
     else {
-        $auditLogMessage = "Could not delete AFAS Profit account: [$($actionContext.References.Account)]. Error: $($ex.Exception.Message). Action initiated by: [$($actionContext.Origin)]"
+        $auditLogMessage = "Could not delete AFAS Profit account: [$($actionContext.References.Account)]. Error: $($ex.Exception.Message)"
         Write-Warning "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($ex.Exception.Message)"
     }
     $outputContext.AuditLogs.Add([PSCustomObject]@{

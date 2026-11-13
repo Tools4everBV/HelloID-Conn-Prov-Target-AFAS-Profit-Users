@@ -125,7 +125,6 @@ try {
                     Reference = $permission.Reference
                 }
                 Description         = [string]$permission.DisplayName
-                DisplayName         = [string]$permission.DisplayName
                 AccountReferences   = $batch
             }
         }

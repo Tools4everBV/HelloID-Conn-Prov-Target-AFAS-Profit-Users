@@ -107,7 +107,7 @@ try {
             $lifecycleProcess = 'RevokePermission'
         }
         else {
-            $lifecycleProcess = 'AlreadyRevoked'
+            $lifecycleProcess = 'NoChanges'
         }
 
     }
@@ -161,11 +161,11 @@ try {
             if (-not($actionContext.DryRun -eq $true)) {
                 Write-Information "Revoking AFAS Profit permission: [$($actionContext.PermissionDisplayName)] - [$permissionReference]"
                 $null = Invoke-RestMethod @splatUpdateParams -Verbose:$false
-                $auditLogMessage = "Revoked permission [$($actionContext.PermissionDisplayName)]. Action initiated by: [$($actionContext.Origin)]"
+                $auditLogMessage = "Revoked permission [$($actionContext.PermissionDisplayName)]"
             }
             else {
                 Write-Information "[DryRun] Revoke AFAS Profit permission: [$($actionContext.PermissionDisplayName)] - [$permissionReference], will be executed during enforcement"
-                $auditLogMessage = "[DryRun] Would revoke permission [$($actionContext.PermissionDisplayName)]. Action initiated by: [$($actionContext.Origin)]"
+                $auditLogMessage = "[DryRun] Would revoke permission [$($actionContext.PermissionDisplayName)]"
             }
 
             $outputContext.Success = $true
@@ -176,11 +176,11 @@ try {
             break
         }
 
-        'AlreadyRevoked' {
-            Write-Information "AFAS Profit permission: [$($actionContext.PermissionDisplayName)] - [$permissionReference] is already revoked for account: [$($actionContext.References.Account)]"
+        'NoChanges' {
+            Write-Information "AFAS Profit permission: [$($actionContext.PermissionDisplayName)] - [$permissionReference] is already absent from account: [$($actionContext.References.Account)]"
             $outputContext.Success = $true
             $outputContext.AuditLogs.Add([PSCustomObject]@{
-                    Message = "AFAS Profit permission: [$($actionContext.PermissionDisplayName)] - [$permissionReference] is already revoked for account: [$($actionContext.References.Account)]. Action initiated by: [$($actionContext.Origin)]"
+                    Message = "Skipped revoking permission: [$($actionContext.PermissionDisplayName)] from [$($actionContext.References.Account)]. Reason: Permission is already absent."
                     IsError = $false
                 })
             break
@@ -190,7 +190,7 @@ try {
             Write-Information "AFAS Profit account: [$($actionContext.References.Account)] could not be found, indicating that it may have been deleted"
             $outputContext.Success = $true
             $outputContext.AuditLogs.Add([PSCustomObject]@{
-                    Message = "AFAS Profit account: [$($actionContext.References.Account)] could not be found, indicating that it may have been deleted. Action initiated by: [$($actionContext.Origin)]"
+                    Message = "AFAS Profit account: [$($actionContext.References.Account)] could not be found, indicating that it may have been deleted"
                     IsError = $false
                 })
             break
@@ -203,11 +203,11 @@ catch {
     if ($($ex.Exception.GetType().FullName -eq 'Microsoft.PowerShell.Commands.HttpResponseException') -or
         $($ex.Exception.GetType().FullName -eq 'System.Net.WebException')) {
         $errorObj = Resolve-AFASProfitError -ErrorObject $ex
-        $auditLogMessage = "Could not revoke AFAS Profit permission for account: [$($actionContext.References.Account)]. Error: $($errorObj.FriendlyMessage). Action initiated by: [$($actionContext.Origin)]"
+        $auditLogMessage = "Could not revoke AFAS Profit permission for account: [$($actionContext.References.Account)]. Error: $($errorObj.FriendlyMessage)"
         Write-Warning "Error at Line '$($errorObj.ScriptLineNumber)': $($errorObj.Line). Error: $($errorObj.ErrorDetails)"
     }
     else {
-        $auditLogMessage = "Could not revoke AFAS Profit permission for account: [$($actionContext.References.Account)]. Error: $($ex.Exception.Message). Action initiated by: [$($actionContext.Origin)]"
+        $auditLogMessage = "Could not revoke AFAS Profit permission for account: [$($actionContext.References.Account)]. Error: $($ex.Exception.Message)"
         Write-Warning "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($ex.Exception.Message)"
     }
     $outputContext.AuditLogs.Add([PSCustomObject]@{

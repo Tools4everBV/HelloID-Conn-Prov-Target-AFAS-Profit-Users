@@ -104,13 +104,19 @@ try {
             throw 'Correlated AFAS user is missing required identifier [Gebruiker/UsId]. Verify the AFAS GetConnector output.'
         }
 
-        # AFAS dependency: Profit Windows cannot be enabled while InSite is inactive. Report this
-        # instead of enabling InSite, because that would grant a permission that was not requested.
-        if ($permissionReference -eq 'Awin' -and -not [bool]$correlatedAccount.InSi) {
-            throw "Permission [$permissionReference] can only be granted when permission [InSi] is active. Grant [InSite access] first."
+        # Verify if the permission is already assigned to the account
+        if ($correlatedAccount.$permissionReference -eq $true) {
+            $lifecycleProcess = 'NoChanges'
         }
+        else {
+            # AFAS dependency: Profit Windows cannot be enabled while InSite is inactive. Report this
+            # instead of enabling InSite, because that would grant a permission that was not requested.
+            if ($permissionReference -eq 'Awin' -and -not [bool]$correlatedAccount.InSi) {
+                throw "Permission [$permissionReference] can only be granted when permission [InSi] is active. Grant [InSite access] first."
+            }
 
-        $lifecycleProcess = 'GrantPermission'
+            $lifecycleProcess = 'GrantPermission'
+        }
     }
     elseif ($correlatedAccount.Count -gt 1) {
         throw "Multiple AFAS Profit users found for person number [$($actionContext.References.Account)]: [$(@($correlatedAccount.UsId) -join ', ')]"
@@ -169,6 +175,16 @@ try {
             $outputContext.Success = $true
             $outputContext.AuditLogs.Add([PSCustomObject]@{
                     Message = $auditLogMessage
+                    IsError = $false
+                })
+            break
+        }
+
+        'NoChanges' {
+            Write-Information "AFAS Profit permission: [$($actionContext.PermissionDisplayName)] - [$permissionReference] is already granted to account: [$($actionContext.References.Account)]"
+            $outputContext.Success = $true
+            $outputContext.AuditLogs.Add([PSCustomObject]@{
+                    Message = "Skipped granting permission: [$($actionContext.PermissionDisplayName)] to [$($actionContext.References.Account)]. Reason: Permission is already granted."
                     IsError = $false
                 })
             break
