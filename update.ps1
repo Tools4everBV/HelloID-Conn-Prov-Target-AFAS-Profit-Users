@@ -211,6 +211,9 @@ try {
             $lifecycleActionList += @('NoChanges')
         }
     }
+    elseif ($correlatedAccount.Count -gt 1) {
+        throw "Multiple AFAS Profit users found for person number [$($actionContext.References.Account)]: [$(@($correlatedAccount.UsId) -join ', ')]"
+    }
     else {
         $lifecycleActionList += @('NotFound')
     }

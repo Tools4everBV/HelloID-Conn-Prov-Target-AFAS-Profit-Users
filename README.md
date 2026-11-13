@@ -151,6 +151,9 @@ The account reference is populated with the `BcCo` property (person number) from
 > [!IMPORTANT]
 > When using the permissions of this connector, set the **concurrent actions** of the target system to `1`. The AFAS `KnUser` update connector updates the user as a whole, so two simultaneous mutations on the same user will clash and can overwrite each other's changes.
 
+> [!IMPORTANT]
+> A person number (`BcCo`) must resolve to a single AFAS user in the GetConnector. When multiple users are found, the action fails and the audit log lists the user IDs (`UsId`) that were found.
+
 ### Enable / Disable
 
 > [!TIP]
