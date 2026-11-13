@@ -3,10 +3,6 @@
 # PowerShell V2
 ##################################################
 
-#TODO: Remove hardcoded values
-# $actionContext.References.Account = "45963.AndreO"
-# $actionContext.DryRun = $false
-
 # Enable TLS1.2
 [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor [System.Net.SecurityProtocolType]::Tls12
 

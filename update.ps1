@@ -3,12 +3,6 @@
 # PowerShell V2
 #################################################
 
-#TODO: Remove hardcoded values
-# $actionContext.References.Account = "45963.AndreO"
-# $actionContext.Configuration.UpdateUserId = $true
-# $actionContext.AccountCorrelated = $true
-# $actionContext.DryRun = $false
-
 # Enable TLS1.2
 [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor [System.Net.SecurityProtocolType]::Tls12
 
@@ -169,37 +163,31 @@ try {
 
         $outputContext.PreviousData = $correlatedAccount | Select-Object -Property $outputContext.Data.PSObject.Properties.Name
 
-        $mappedData = [PSCustomObject]@{}
-        $currentData = [PSCustomObject]@{}
-        $mappedValues = @{}
+        # Compare only mapped values, normalized to avoid type-based changes and mutation of input data.
+        $mappedProperties = @($actionContext.Data.PSObject.Properties | Where-Object {
+                $_.Name -ne 'BcCo' -and ($updateUserIdEnabled -or $_.Name -ne 'UsId') -and
+            $null -ne $correlatedAccount.PSObject.Properties[$_.Name] -and
+                $null -ne $_.Value -and -not ($_.Value -is [string] -and [string]::IsNullOrEmpty($_.Value))
+            } | ForEach-Object {
+                $value = $_.Value
+                if ($value -is [string] -and $value -match '^(true|false)$') {
+                    $value = [bool]::Parse($value)
+                }
+                $comparisonValue = if ($value -is [bool]) { $value.ToString().ToLowerInvariant() } else { [string]$value }
+                [PSCustomObject]@{ Name = $_.Name; Value = $comparisonValue; MappedValue = $value }
+            })
 
-        foreach ($mappedProperty in $actionContext.Data.PSObject.Properties) {
-            if ($mappedProperty.Name -eq 'BcCo' -or ($mappedProperty.Name -eq 'UsId' -and -not $updateUserIdEnabled)) {
-                continue
-            }
-            if ($null -eq $correlatedAccount.PSObject.Properties[$mappedProperty.Name] -or $null -eq $mappedProperty.Value) {
-                continue
-            }
-
-            $mappedValue = $mappedProperty.Value
-            $mappedValues[$mappedProperty.Name] = $mappedValue
-            $mappedComparisonValue = [string]$mappedValue
-            if ($mappedValue -is [string] -and $mappedValue -match '^(true|false)$') {
-                $mappedComparisonValue = $mappedComparisonValue.ToLowerInvariant()
-            }
-            $currentValue = $correlatedAccount.PSObject.Properties[$mappedProperty.Name].Value
-            $currentComparisonValue = [string]$currentValue
-            if ($currentValue -is [bool]) {
-                $currentComparisonValue = $currentComparisonValue.ToLowerInvariant()
-            }
-
-            $mappedData | Add-Member -MemberType NoteProperty -Name $mappedProperty.Name -Value $mappedComparisonValue -Force
-            $currentData | Add-Member -MemberType NoteProperty -Name $mappedProperty.Name -Value $currentComparisonValue -Force
-        }
+        $currentProperties = @($mappedProperties | ForEach-Object {
+                $currentProperty = $correlatedAccount.PSObject.Properties[$_.Name]
+                $currentValue = if ($null -eq $currentProperty) { $null } else { $currentProperty.Value }
+                $comparisonValue = if ($currentValue -is [bool]) { $currentValue.ToString().ToLowerInvariant() } else { [string]$currentValue }
+                [PSCustomObject]@{ Name = $_.Name; Value = $comparisonValue }
+            })
 
         $splatCompareProperties = @{
-            ReferenceObject  = @($currentData.PSObject.Properties)
-            DifferenceObject = @($mappedData.PSObject.Properties)
+            ReferenceObject  = $currentProperties
+            DifferenceObject = $mappedProperties
+            Property         = @('Name', 'Value')
         }
         $propertiesChanged = @(Compare-Object @splatCompareProperties -PassThru | Where-Object { $_.SideIndicator -eq '=>' })
         $usIdChange = @($propertiesChanged | Where-Object { $_.Name -eq 'UsId' })
@@ -207,7 +195,7 @@ try {
 
         # Depending on connector configuration, allow changes of the User ID (UsId).
         if ($updateUserIdEnabled -and $usIdChange.Count -gt 0 -and $actionContext.AccountCorrelated) {
-            $newUsId = [string]$mappedValues['UsId']
+            $newUsId = [string]($usIdChange | Select-Object -First 1 -ExpandProperty MappedValue)
             $lifecycleActionList += @('UpdateUserId')
         }
         # Keep UsId in output data aligned with the current AFAS value when it exists in mapping.
@@ -271,7 +259,7 @@ try {
 
                 # Add changed properties to Fields payload.
                 foreach ($property in $accountPropertiesChanged) {
-                    $fieldsToUpdate[$property.Name] = $mappedValues[$property.Name]
+                    $fieldsToUpdate[$property.Name] = $property.MappedValue
                 }
 
                 if (-not($actionContext.DryRun -eq $true)) {
@@ -281,9 +269,9 @@ try {
                     Write-Information "[DryRun] Update AFAS Profit account with accountReference: [$($actionContext.References.Account)], will be executed during enforcement"
                 }
 
-                # Update outputContext.Data with changed values only, leaving unchanged values as-is.
+                # 1 - Update outputContext.Data with changed values only, leaving unchanged values as-is.
                 foreach ($property in $accountPropertiesChanged) {
-                    $outputContext.Data | Add-Member -MemberType NoteProperty -Name $property.Name -Value $mappedValues[$property.Name] -Force
+                    $outputContext.Data | Add-Member -MemberType NoteProperty -Name $property.Name -Value $property.MappedValue -Force
                 }
                 $outputContext.Data | Add-Member -MemberType NoteProperty -Name 'BcCo' -Value $correlatedAccount.BcCo -Force
                 $outputContext.Success = $true
