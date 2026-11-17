@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file. The format 
 
 ## [5.0.0] - 2026-11-17
 
-This is a breaking release: the account reference, the correlation field and the GetConnector have changed. Upgrade with a clean go-live of the connector, see "Upgrading from version 4.x" in the README.
+This is a breaking release: the account reference, the correlation field and the GetConnector have changed. Upgrade with a clean go-live of the connector, see [MIGRATION.md](./MIGRATION.md).
 
 ### Added
 

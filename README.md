@@ -48,7 +48,7 @@ _HelloID-Conn-Prov-Target-AFAS-Profit-Users_ is a _target_ connector. _AFAS-Prof
 The connector is primarily used to correlate existing AFAS users and to keep account data such as the e-mail address and UPN up to date. Creating an AFAS user is optional. Account data and the account lifecycle are handled by the account lifecycle scripts; AFAS authorizations (InSite, Profit Windows, etc.) are handled as permissions, so they can be assigned with business rules.
 
 > [!WARNING]
-> Version 5.0.0 contains breaking changes and is not backward compatible with version 4.x. See [Breaking change in version 5.0.0](#breaking-change-in-version-500).
+> Version 5.0.0 contains breaking changes and is not backward compatible with version 4.x. See [MIGRATION.md](./MIGRATION.md).
 
 ## Supported features
 
@@ -162,27 +162,7 @@ The account reference is populated with the `BcCo` property (person number) from
 ### Breaking change in version 5.0.0
 
 > [!WARNING]
-> Version 5.0.0 is **not backward compatible** with version 4.x. Do not replace the scripts of an existing 4.x target system that already has granted accounts.
-
-The following identifiers and settings have changed:
-
-| Item                      | Version 4.x                                  | Version 5.0.0                                                                                    |
-| ------------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| Account reference         | Object with the user ID (`Gebruiker`/`UsId`) | Person number `BcCo` (string)                                                                    |
-| Account correlation field | `Medewerker`                                 | `EmId`                                                                                           |
-| GetConnector              | `T4E_HelloID_Users_v2`                       | `T4E_HelloID_Target_Users`                                                                       |
-| AFAS authorizations       | Set in the account lifecycle scripts         | Permissions (`permissions/authorizations`)                                                       |
-| Configuration             | `onlyUpdateOnCorrelate`, `isDebug`           | Removed; added `DisableMode` and `DeleteMode`; `CreateUser` and `UpdateUserId` changed behavior |
-
-The scripts look up the user by `BcCo`. With an account reference of version 4.x no user is found: update and enable fail, while disable, delete and revoke treat the account as already deleted and do nothing.
-
-Because this is primarily a correlate-only connector, the upgrade is a **clean go-live** of the connector:
-
-1. Import the GetConnector [Tools4ever - HelloID - T4E_HelloID_Target_Users.gcn](./Tools4ever%20-%20HelloID%20-%20T4E_HelloID_Target_Users.gcn) in AFAS Profit and give the App connector access to it.
-2. Configure the target system with the scripts, configuration, correlation and field mapping of this version.
-3. Keep `CreateUser` disabled during the go-live, so existing AFAS users are only correlated.
-4. Run a dry run (preview) and check the correlation results before enforcing.
-5. Grant the permissions with business rules; use the permission entitlement import to compare them with the current situation in AFAS.
+> Version 5.0.0 is **not backward compatible** with version 4.x. The account reference, the correlation field and the GetConnector have changed. Upgrade with a clean go-live of the connector, see [MIGRATION.md](./MIGRATION.md).
 
 ### Private data
 
