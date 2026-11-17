@@ -96,8 +96,8 @@
           "MapForActions": [
             "Delete"
           ],
-          "MappingMode": "Fixed",
-          "Value": "\"\"",
+          "MappingMode": "Complex",
+          "Value": "\"function getPrivateEmail() {\\r\\n    let privateMail = '';\\r\\n\\r\\n    if (typeof Person.Contact.Personal.Email !== 'undefined' && Person.Contact.Personal.Email) {\\r\\n        privateMail = Person.Contact.Personal.Email;\\r\\n    }\\r\\n\\r\\n    return privateMail;\\r\\n}\\r\\n\\r\\ngetPrivateEmail();\"",
           "UsedInNotifications": false,
           "StoreInAccountData": false
         }
@@ -149,7 +149,7 @@
             "Delete"
           ],
           "MappingMode": "Fixed",
-          "Value": "\"2\"",
+          "Value": "\"1\"",
           "UsedInNotifications": false,
           "StoreInAccountData": false
         }

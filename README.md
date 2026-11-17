@@ -148,10 +148,10 @@ Two field mappings are available. They differ only in the end state after employ
 
 | File                                                     | Disable                                  | Delete                                                                             |
 | -------------------------------------------------------- | ---------------------------------------- | ---------------------------------------------------------------------------------- |
-| [_fieldMapping.json_](./fieldMapping.json)               | OutSite disabled, user not blocked (`1`) | OutSite disabled, user not blocked (`1`), UPN cleared, e-mail set to the private e-mail address |
-| [_fieldMapping.option1.json_](./fieldMapping.option1.json) | OutSite disabled, user blocked and groups kept (`2`) | OutSite disabled, user blocked and groups kept (`2`), UPN and e-mail cleared |
+| [_fieldMapping.json_](./fieldMapping.json)               | OutSite disabled, user blocked and groups kept (`2`) | OutSite disabled, user blocked and groups kept (`2`), UPN and e-mail cleared |
+| [_fieldMapping.option1.json_](./fieldMapping.option1.json) | OutSite disabled, user not blocked (`1`) | OutSite disabled, user not blocked (`1`), UPN cleared, e-mail set to the private e-mail address |
 
-Use the default mapping when former employees keep using AFAS with their private e-mail address (for example to view their annual statement). Use option 1 when former employees must be blocked in AFAS. Both mappings set OutSite to disabled on enable; change the `Site` mapping for enable to `true` when OutSite must be enabled for active employees.
+Use the default mapping when former employees must be blocked in AFAS. Use option 1 when former employees must not be blocked and keep their private e-mail address in AFAS. For the use of these AFAS settings, see the [AFAS documentation](https://help.afas.nl/help/en/SE/App_Conect_UpdDsc_KnUser.htm). Both mappings set OutSite to disabled on enable; change the `Site` mapping for enable to `true` when OutSite must be enabled for active employees.
 
 ### Account Reference
 
@@ -186,7 +186,7 @@ Because this is primarily a correlate-only connector, the upgrade is a **clean g
 
 ### Private data
 
-- **GDPR**: The private data of persons, such as the private e-mail address and birth date, is not in the data collection by default. When it is needed for the implementation (for example the private e-mail address on delete), these properties have to be added.
+- **GDPR**: The private data of persons, such as the private e-mail address and birth date, is not in the data collection by default. When it is needed for the implementation (for example the private e-mail address on delete in _fieldMapping.option1.json_), these properties have to be added.
 
 ### Users are never deleted
 

@@ -12,7 +12,8 @@ This is a breaking release: the account reference, the correlation field and the
 - Added permission entitlement import (`importPermissions.ps1`)
 - Added configuration settings `DisableMode` and `DeleteMode` for disable and delete during reconciliation (default: block the user, keep groups and disable OutSite)
 - Added GetConnector `Tools4ever - HelloID - T4E_HelloID_Target_Users.gcn`
-- Added alternative field mapping `fieldMapping.option1.json` that blocks former employees and clears e-mail and UPN
+- Added alternative field mapping `fieldMapping.option1.json` that does not block former employees, clears UPN and sets e-mail to the private e-mail address
+- Default field mapping blocks former employees, keeps their groups and clears e-mail and UPN
 
 ### Changed
 
