@@ -76,20 +76,12 @@ https://raw.githubusercontent.com/Tools4everBV/HelloID-Conn-Prov-Target-AFAS-Pro
 ### Requirements
 
 - HelloID Provisioning agent (cloud or on-prem).
-- Loaded and available AFAS GetConnectors.
-- In addition to the above get-connector, the connector also uses the following built-in Profit update-connectors:
-  - KnUser
+- **AFAS GetConnector** `T4E_HelloID_Target_Users`:<br>
+  Import [Tools4ever - HelloID - T4E_HelloID_Target_Users.gcn](./Tools4ever%20-%20HelloID%20-%20T4E_HelloID_Target_Users.gcn) into the AFAS Profit environment. The scripts use the fields `EmId`, `BcCo`, `UsId`, `Nm`, `EmAd`, `Upn`, `Site`, `Bl` and the permission fields `InSi`, `Awin`, `OcUs`, `PoMa` and `AcUs`. When the GetConnector is changed, these fields must remain available.
+- **AFAS update connector** `KnUser`:<br>
+  The built-in Profit update connector that is used to create and update users.
 - **AFAS App Connector**:<br>
   An App Connector with OAuth client credentials (client id and client secret) and access to the GetConnector and the `KnUser` update connector. See the AFAS Knowledge Base: [Create the APP connector](https://help.afas.nl/help/NL/SE/App_Apps_Custom_Add.htm), [Manage the APP connector](https://help.afas.nl/help/NL/SE/App_Apps_Custom_Maint.htm) and [Configure OAuth on the APP connector](https://help.afas.nl/help/NL/SE/120718.htm#o136210).
-
-> [!TIP]
-> For this connector we have created a default set [Tools4ever - HelloID - T4E_HelloID_Target_Users.gcn](./Tools4ever%20-%20HelloID%20-%20T4E_HelloID_Target_Users.gcn), which can be imported directly into the AFAS Profit environment.
-
-> [!NOTE]
-> When the connector is defined as target system, only the following GetConnector is used by HelloID:
-> - Tools4ever - HelloID - T4E_HelloID_Target_Users
->
-> The scripts use the fields `EmId`, `BcCo`, `UsId`, `Nm`, `EmAd`, `Upn`, `Site`, `Bl` and the permission fields `InSi`, `Awin`, `OcUs`, `PoMa` and `AcUs`. When the GetConnector is changed, these fields must remain available.
 
 ### Connection settings
 
