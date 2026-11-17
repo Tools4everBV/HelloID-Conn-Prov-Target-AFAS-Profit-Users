@@ -7,6 +7,23 @@
 [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor [System.Net.SecurityProtocolType]::Tls12
 
 #region functions
+function ConvertTo-AFASBoolean {
+    # A GetConnector can return a boolean as text, and [bool]'false' is $true in PowerShell.
+    param (
+        [AllowNull()]
+        [object]
+        $Value
+    )
+    if ($Value -is [bool]) {
+        return $Value
+    }
+    $parsedValue = $false
+    if ([bool]::TryParse([string]$Value, [ref]$parsedValue)) {
+        return $parsedValue
+    }
+    return ([string]$Value -eq '1')
+}
+
 function Resolve-AFASProfitError {
     [CmdletBinding()]
     param (
@@ -103,7 +120,7 @@ try {
         if ([string]::IsNullOrWhiteSpace([string]$correlatedAccount.UsId)) {
             throw 'Correlated AFAS user is missing required identifier [Gebruiker/UsId]. Verify the AFAS GetConnector output.'
         }
-        elseif ($correlatedAccount.$permissionReference -eq $true) {
+        elseif (ConvertTo-AFASBoolean $correlatedAccount.$permissionReference) {
             $lifecycleProcess = 'RevokePermission'
         }
         else {
@@ -121,7 +138,7 @@ try {
     # Process
     switch ($lifecycleProcess) {
         'RevokePermission' {
-            if ($permissionReference -eq 'InSi' -and [bool]$correlatedAccount.Awin) {
+            if ($permissionReference -eq 'InSi' -and (ConvertTo-AFASBoolean $correlatedAccount.Awin)) {
                 throw "Permission [InSi] cannot be revoked while permission [Awin] is active. Revoke [Profit Windows access] first."
             }
 

@@ -7,6 +7,23 @@
 [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor [System.Net.SecurityProtocolType]::Tls12
 
 #region functions
+function ConvertTo-AFASBoolean {
+    # A GetConnector can return a boolean as text, and [bool]'false' is $true in PowerShell.
+    param (
+        [AllowNull()]
+        [object]
+        $Value
+    )
+    if ($Value -is [bool]) {
+        return $Value
+    }
+    $parsedValue = $false
+    if ([bool]::TryParse([string]$Value, [ref]$parsedValue)) {
+        return $parsedValue
+    }
+    return ([string]$Value -eq '1')
+}
+
 function Resolve-AFASProfitError {
     [CmdletBinding()]
     param (
@@ -105,13 +122,13 @@ try {
         }
 
         # Verify if the permission is already assigned to the account
-        if ($correlatedAccount.$permissionReference -eq $true) {
+        if (ConvertTo-AFASBoolean $correlatedAccount.$permissionReference) {
             $lifecycleProcess = 'NoChanges'
         }
         else {
             # AFAS dependency: Profit Windows cannot be enabled while InSite is inactive. Report this
             # instead of enabling InSite, because that would grant a permission that was not requested.
-            if ($permissionReference -eq 'Awin' -and -not [bool]$correlatedAccount.InSi) {
+            if ($permissionReference -eq 'Awin' -and -not (ConvertTo-AFASBoolean $correlatedAccount.InSi)) {
                 throw "Permission [$permissionReference] can only be granted when permission [InSi] is active. Grant [InSite access] first."
             }
 

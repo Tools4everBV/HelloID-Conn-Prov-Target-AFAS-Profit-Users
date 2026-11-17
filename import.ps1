@@ -7,6 +7,23 @@
 [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor [System.Net.SecurityProtocolType]::Tls12
 
 #region functions
+function ConvertTo-AFASBoolean {
+    # A GetConnector can return a boolean as text, and [bool]'false' is $true in PowerShell.
+    param (
+        [AllowNull()]
+        [object]
+        $Value
+    )
+    if ($Value -is [bool]) {
+        return $Value
+    }
+    $parsedValue = $false
+    if ([bool]::TryParse([string]$Value, [ref]$parsedValue)) {
+        return $parsedValue
+    }
+    return ([string]$Value -eq '1')
+}
+
 function Resolve-AFASProfitError {
     [CmdletBinding()]
     param (
@@ -116,7 +133,7 @@ try {
                 AccountReference = [string]$importedAccount.BcCo
                 DisplayName      = $displayName.substring(0, [System.Math]::Min(100, $displayName.Length))
                 UserName         = $importedAccount.UsId
-                Enabled          = (-not [bool]$importedAccount.Bl)
+                Enabled          = (-not (ConvertTo-AFASBoolean $importedAccount.Bl))
                 Data             = $data
             }
         }

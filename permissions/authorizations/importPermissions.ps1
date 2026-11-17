@@ -7,6 +7,23 @@
 [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor [System.Net.SecurityProtocolType]::Tls12
 
 #region functions
+function ConvertTo-AFASBoolean {
+    # A GetConnector can return a boolean as text, and [bool]'false' is $true in PowerShell.
+    param (
+        [AllowNull()]
+        [object]
+        $Value
+    )
+    if ($Value -is [bool]) {
+        return $Value
+    }
+    $parsedValue = $false
+    if ([bool]::TryParse([string]$Value, [ref]$parsedValue)) {
+        return $parsedValue
+    }
+    return ([string]$Value -eq '1')
+}
+
 function Resolve-AFASProfitError {
     [CmdletBinding()]
     param (
@@ -109,8 +126,7 @@ try {
             $property = $account.PSObject.Properties[$permission.Reference]
             $permissionValue = if ($null -eq $property) { $null } else { $property.Value }
 
-            # Permission fields are booleans in the GetConnector, so evaluate them as one.
-            if (([bool]$permissionValue) -and -not [string]::IsNullOrWhiteSpace($account.BcCo)) {
+            if ((ConvertTo-AFASBoolean $permissionValue) -and -not [string]::IsNullOrWhiteSpace($account.BcCo)) {
                 $null = $memberReferences.Add([string]$account.BcCo)
             }
         }
