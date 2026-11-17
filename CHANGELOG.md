@@ -23,7 +23,9 @@ This is a breaking release: the account reference, the correlation field and the
 - OutSite (`Site`) and the mutation code (`MtCd`) are set with the field mapping for enable, disable and delete
 - `CreateUser` now creates an AFAS user only when the correlated employee (`EmId` with a person number) has no user ID; without an employee the create action fails
 - `UpdateUserId` now only changes the user ID (`UsId`) in the update directly after correlation
-- Update only sends the changed mapped fields
+- Update only sends the changed mapped fields; an empty or `null` mapped value clears the field in AFAS
+- Create fails with a clear message when the mapped `UsId` is empty
+- Boolean fields from the GetConnector are also evaluated correctly when they are returned as text
 - Actions fail when a person number resolves to multiple AFAS users
 - Rewrote all scripts according to the PowerShell V2 target template 4.2.0
 
