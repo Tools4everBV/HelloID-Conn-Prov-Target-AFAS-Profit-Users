@@ -31,8 +31,6 @@
     - [Comma or semicolon in values](#comma-or-semicolon-in-values)
     - [Create / correlate](#create--correlate)
     - [Update](#update)
-    - [Enable / Disable](#enable--disable)
-    - [Delete](#delete)
     - [Reconciliation](#reconciliation)
     - [Permissions](#permissions)
   - [Development resources](#development-resources)
@@ -186,70 +184,28 @@ The account reference is populated with the `BcCo` property (person number) from
 
 ### Create / correlate
 
-The create action searches the employee by `EmId` with a non-empty `BcCo`:
-
-- One employee with a `UsId`: the existing AFAS user is correlated and `BcCo` is stored as account reference.
-- One employee without a `UsId`: when `Create user when Medewerker has no User ID` is toggled, a new AFAS user is created with the mapped `UsId` and fields. All authorizations (`InSi`, `Acon`, `Abac`, `Acom`) are set to `false`; grant them with permissions. When the setting is not toggled, the action fails.
-- No employee or multiple employees: the action fails.
+The create action searches the employee by `EmId` with a non-empty `BcCo`. When the employee has a `UsId`, the AFAS user is correlated. When the employee has no `UsId`, a new AFAS user is created only when `Create user when Medewerker has no User ID` is toggled; all authorizations are then set to `false` and are granted with permissions.
 
 ### Update
 
-The update action compares the mapped fields with the values in AFAS and only sends the changed fields with mutation code `1`. An empty (`""`) or `null` mapped value clears the field in AFAS. `UsId` cannot be cleared.
-
-> [!WARNING]
-> The default mappings for `EmAd` and `Upn` return an empty value when the person has no value in Active Directory (yet). The update action then clears the value in AFAS. Change the mapping when the AFAS value must be kept in that case.
-
-When `Update User ID after correlation` is toggled, a different `UsId` is changed with mutation code `4`, only in the update that directly follows the correlation. The account reference (`BcCo`) does not change.
-
-When the account is not found, the update fails; there is no fallback correlation.
-
-### Enable / Disable
-
-> [!TIP]
-> The enable and disable actions send the mapped fields (by default `Site` and `MtCd`). Optionally, add other properties such as **"EmAd", "Upn"** to the field mapping for these actions. For more information on the mutation codes, see the [AFAS documentation](https://help.afas.nl/help/en/SE/App_Conect_UpdDsc_KnUser.htm).
-
-When the account is not found, enable fails and disable succeeds without changes.
-
-### Delete
-
-> [!TIP]
-> The delete action sends the mapped fields. The values of `EmAd` and `Upn` have to be unique over all AFAS environments, which is why the default mappings clear or replace them. For more information on the mutation codes, see the [AFAS documentation](https://help.afas.nl/help/en/SE/App_Conect_UpdDsc_KnUser.htm).
-
-When the account is not found, delete succeeds without changes.
+The update action only sends the changed fields. An empty (`""`) or `null` mapped value clears the field in AFAS. `UsId` cannot be cleared.
 
 ### Reconciliation
 
-During reconciliation no field mapping data is available. The disable and delete actions then use the settings `Behavior on disable during a reconciliation action` (`DisableMode`) and `Behavior on delete during a reconciliation action` (`DeleteMode`):
+During reconciliation no field mapping data is available, so disable and delete use the settings `DisableMode` and `DeleteMode`:
 
-| Value                                       | Disable                                  | Delete                                                         |
-| ------------------------------------------- | ---------------------------------------- | -------------------------------------------------------------- |
-| `blockKeepGroupsDisableOutSite` (default)   | OutSite disabled, block and keep groups  | OutSite disabled, block and keep groups, clear e-mail and UPN  |
-| `blockRemoveGroupsDisableOutSite`           | OutSite disabled, block and remove groups | OutSite disabled, block and remove groups, clear e-mail and UPN |
-| `enableOutSiteNoBlock`                      | OutSite enabled, no block                | OutSite enabled, no block, clear UPN and keep e-mail           |
-
-> [!WARNING]
-> `enableOutSiteNoBlock` gives OutSite access to accounts that reconciliation disables or deletes. AFAS requires an e-mail address (`EmAd`) to enable OutSite, so the action fails for users without one.
+| Value                                     | Disable                                   | Delete                                                          |
+| ----------------------------------------- | ----------------------------------------- | --------------------------------------------------------------- |
+| `blockKeepGroupsDisableOutSite` (default) | OutSite disabled, block and keep groups   | OutSite disabled, block and keep groups, clear e-mail and UPN   |
+| `blockRemoveGroupsDisableOutSite`         | OutSite disabled, block and remove groups | OutSite disabled, block and remove groups, clear e-mail and UPN |
+| `enableOutSiteNoBlock`                    | OutSite enabled, no block                 | OutSite enabled, no block, clear UPN and keep e-mail            |
 
 ### Permissions
 
-The permissions are a static list of AFAS authorizations on the user. Grant sets the field to `true`, revoke sets it to `false`. The permission reference is the AFAS field name.
-
-| Permission                       | Reference |
-| -------------------------------- | --------- |
-| InSite access                    | `InSi`    |
-| Profit Windows access            | `Awin`    |
-| Activate collaboration license   | `OcUs`    |
-| AFAS Online Portal administrator | `PoMa`    |
-| AFAS Accept                      | `AcUs`    |
+The permission reference is the AFAS field name: `InSi` (InSite), `Awin` (Profit Windows), `OcUs` (collaboration license), `PoMa` (AFAS Online Portal administrator) and `AcUs` (AFAS Accept).
 
 > [!IMPORTANT]
-> AFAS only allows Profit Windows access (`Awin`) while InSite access (`InSi`) is active. The connector does not change the other permission automatically:
-> - Granting `Awin` fails while `InSi` is not active.
-> - Revoking `InSi` fails while `Awin` is active.
->
-> HelloID does not guarantee the order of grants and revokes. When a person receives or loses both permissions in the same run, one of the actions can fail and succeeds in a next run. Make sure that the business rules grant `InSi` whenever they grant `Awin`.
-
-When the account is not found, grant fails and revoke succeeds without changes. OutSite is not a permission; it is set with the field mapping (`Site`).
+> AFAS only allows `Awin` while `InSi` is active. Granting `Awin` fails while `InSi` is not active, and revoking `InSi` fails while `Awin` is active. Make sure that the business rules grant `InSi` whenever they grant `Awin`.
 
 ## Development resources
 
