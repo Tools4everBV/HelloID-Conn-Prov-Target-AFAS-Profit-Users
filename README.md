@@ -68,7 +68,7 @@ The following identifiers and settings have changed:
 | Account correlation field | `Medewerker`                                 | `EmId`                                                               |
 | GetConnector              | `T4E_HelloID_Users_v2`                       | `T4E_HelloID_Target_Users`                                           |
 | AFAS authorizations       | Set in the account lifecycle scripts         | Permissions (`permissions/authorizations`)                           |
-| Configuration             | `Update on update`, debug toggle             | Removed; added `CreateUser`, `DisableMode` and `DeleteMode`          |
+| Configuration             | `onlyUpdateOnCorrelate`, `isDebug`           | Removed; added `DisableMode` and `DeleteMode`; `CreateUser` and `UpdateUserId` changed behavior |
 
 The scripts look up the user by `BcCo`. With an account reference of version 4.x no user is found: update and enable fail, while disable, delete and revoke treat the account as already deleted and do nothing.
 
