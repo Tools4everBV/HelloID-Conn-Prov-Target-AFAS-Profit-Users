@@ -2,6 +2,36 @@
 
 All notable changes to this project will be documented in this file. The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [5.0.0] - 2026-11-17
+
+This is a breaking release: the account reference, the correlation field and the GetConnector have changed. Upgrade with a clean go-live of the connector, see "Upgrading from version 4.x" in the README.
+
+### Added
+
+- Added permissions for the AFAS authorizations InSite access (`InSi`), Profit Windows access (`Awin`), Activate collaboration license (`OcUs`), AFAS Online Portal administrator (`PoMa`) and AFAS Accept (`AcUs`) in `permissions/authorizations`
+- Added permission entitlement import (`importPermissions.ps1`)
+- Added configuration settings `DisableMode` and `DeleteMode` for disable and delete during reconciliation (default: block the user, keep groups and disable OutSite)
+- Added GetConnector `Tools4ever - HelloID - T4E_HelloID_Target_Users.gcn`
+- Added alternative field mapping `fieldMapping.option1.json` that blocks former employees and clears e-mail and UPN
+
+### Changed
+
+- **Breaking:** the account reference is now the person number `BcCo` instead of the user ID (`Gebruiker`/`UsId`)
+- **Breaking:** the account correlation field is now `EmId` instead of `Medewerker`
+- **Breaking:** the default GetConnector is now `T4E_HelloID_Target_Users`
+- AFAS authorizations are no longer set by the account lifecycle scripts; create sets them to `false` and they are managed as permissions
+- OutSite (`Site`) and the mutation code (`MtCd`) are set with the field mapping for enable, disable and delete
+- `CreateUser` now creates an AFAS user only when the correlated employee (`EmId` with a person number) has no user ID; without an employee the create action fails
+- `UpdateUserId` now only changes the user ID (`UsId`) in the update directly after correlation
+- Update only sends the changed mapped fields
+- Actions fail when a person number resolves to multiple AFAS users
+- Rewrote all scripts according to the PowerShell V2 target template 4.2.0
+
+### Removed
+
+- Removed configuration settings `onlyUpdateOnCorrelate` (Only update on correlate) and `isDebug` (Toggle debug logging)
+- Removed GetConnector `Tools4ever - HelloID - T4E_HelloID_Users_v2.gcn`
+
 ## [4.0.0] - 2026-09-29
 
 ### Changed
