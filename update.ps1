@@ -164,12 +164,14 @@ try {
         $outputContext.PreviousData = $correlatedAccount | Select-Object -Property $outputContext.Data.PSObject.Properties.Name
 
         # Compare only mapped values, normalized to avoid type-based changes and mutation of input data.
+        # An empty or null mapped value clears the field in AFAS. UsId cannot be cleared.
         $mappedProperties = @($actionContext.Data.PSObject.Properties | Where-Object {
                 $_.Name -ne 'BcCo' -and ($updateUserIdEnabled -or $_.Name -ne 'UsId') -and
-            $null -ne $correlatedAccount.PSObject.Properties[$_.Name] -and
-                $null -ne $_.Value -and -not ($_.Value -is [string] -and [string]::IsNullOrEmpty($_.Value))
+                $null -ne $correlatedAccount.PSObject.Properties[$_.Name] -and
+                -not ($_.Name -eq 'UsId' -and [string]::IsNullOrEmpty([string]$_.Value))
             } | ForEach-Object {
-                $value = $_.Value
+                # AFAS clears text fields with an empty string, not with JSON null. AFAS returns empty fields as null, which compares as an empty string.
+                $value = if ($null -eq $_.Value) { '' } else { $_.Value }
                 if ($value -is [string] -and $value -match '^(true|false)$') {
                     $value = [bool]::Parse($value)
                 }

@@ -220,7 +220,10 @@ The create action searches the employee by `EmId` with a non-empty `BcCo`:
 
 ### Update
 
-The update action compares the mapped fields with the values in AFAS and only sends the changed fields with mutation code `1`. Empty mapped values are skipped, so an update never clears `EmAd` or `Upn`.
+The update action compares the mapped fields with the values in AFAS and only sends the changed fields with mutation code `1`. An empty (`""`) or `null` mapped value clears the field in AFAS. `UsId` cannot be cleared.
+
+> [!WARNING]
+> The default mappings for `EmAd` and `Upn` return an empty value when the person has no value in Active Directory (yet). The update action then clears the value in AFAS. Change the mapping when the AFAS value must be kept in that case.
 
 When `Update User ID after correlation` is toggled, a different `UsId` is changed with mutation code `4`, only in the update that directly follows the correlation. The account reference (`BcCo`) does not change.
 
