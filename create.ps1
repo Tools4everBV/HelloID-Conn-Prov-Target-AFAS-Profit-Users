@@ -194,19 +194,21 @@ try {
                 ErrorAction     = 'Stop'
             }
 
+            # BcCo is not mapped, so take it from AFAS. Correlate does the same by selecting it from the AFAS record.
+            $outputContext.Data = $actionContext.Data | Select-Object -Property $outputContext.Data.PSObject.Properties.Name
+            if ($outputContext.Data.PSObject.Properties.Name -contains 'BcCo') {
+                $outputContext.Data.BcCo = [string]$fieldsToCreate['BcCo']
+            }
+            $outputContext.AccountReference = [string]$fieldsToCreate['BcCo']
+
             if (-not($actionContext.DryRun -eq $true)) {
                 Write-Information "Creating and correlating AFAS account [$newUsId]. Fields in create payload: [$fieldsInPayload]"
                 $null = Invoke-RestMethod @splatCreateParams -Verbose:$false
-
-                $outputContext.Data = $actionContext.Data | Select-Object -Property $outputContext.Data.PSObject.Properties.Name
-                $outputContext.AccountReference = [string]$fieldsToCreate['BcCo']
 
                 $auditLogMessage = "Created and correlated AFAS account with accountReference: [$($outputContext.AccountReference)]. Create payload fields: [$fieldsInPayload]"
             }
             else {
                 Write-Information "[DryRun] Create and correlate AFAS account [$newUsId], will be executed during enforcement. Fields in create payload: [$fieldsInPayload]"
-                $outputContext.Data = $actionContext.Data | Select-Object -Property $outputContext.Data.PSObject.Properties.Name
-                $outputContext.AccountReference = [string]$fieldsToCreate['BcCo']
                 $auditLogMessage = "[DryRun] Would create and correlate AFAS account with accountReference: [$($outputContext.AccountReference)]. Create payload fields: [$fieldsInPayload]"
             }
 
