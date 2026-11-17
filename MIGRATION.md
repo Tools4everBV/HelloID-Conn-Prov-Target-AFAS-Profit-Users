@@ -24,7 +24,7 @@ The scripts look up the user by `BcCo`. With an account reference of version 4.x
 Because this is primarily a correlate-only connector, the upgrade is a **clean go-live** of the connector:
 
 1. Import the GetConnector [Tools4ever - HelloID - T4E_HelloID_Target_Users.gcn](./Tools4ever%20-%20HelloID%20-%20T4E_HelloID_Target_Users.gcn) in AFAS Profit and give the App Connector access to it.
-2. Configure the target system with the scripts, configuration, correlation and field mapping of this version. Choose the field mapping that matches the intake, see [Field mapping options](./README.md#field-mapping-options).
-3. Keep `CreateUser` disabled during the go-live, so existing AFAS users are only correlated.
-4. Run a dry run (preview) and check the correlation results before enforcing.
-5. Grant the permissions with business rules; use the permission entitlement import to compare them with the current situation in AFAS.
+2. Configure the target system with the scripts, configuration, correlation and field mapping of this version. Choose the field mapping that matches the current implementation, see [Field mapping options](./README.md#field-mapping-options).
+3. Configure the account and permission entitlements in the business rules.
+4. Disable the old target system.
+5. Use the entitlement import to import all existing account and permission entitlements.
