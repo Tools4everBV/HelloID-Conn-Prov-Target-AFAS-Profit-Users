@@ -13,7 +13,6 @@
   - [Table of contents](#table-of-contents)
   - [Introduction](#introduction)
   - [Supported features](#supported-features)
-  - [Upgrading from version 4.x (breaking change)](#upgrading-from-version-4x-breaking-change)
   - [Getting started](#getting-started)
     - [HelloID Icon URL](#helloid-icon-url)
     - [Requirements](#requirements)
@@ -24,6 +23,12 @@
       - [Field mapping options](#field-mapping-options)
     - [Account Reference](#account-reference)
   - [Remarks](#remarks)
+    - [Breaking change in version 5.0.0](#breaking-change-in-version-500)
+    - [Private data](#private-data)
+    - [Users are never deleted](#users-are-never-deleted)
+    - [Concurrent actions](#concurrent-actions)
+    - [One AFAS user per person number](#one-afas-user-per-person-number)
+    - [Comma or semicolon in values](#comma-or-semicolon-in-values)
     - [Create / correlate](#create--correlate)
     - [Update](#update)
     - [Enable / Disable](#enable--disable)
@@ -42,55 +47,23 @@ _HelloID-Conn-Prov-Target-AFAS-Profit-Users_ is a _target_ connector. _AFAS-Prof
 
 The connector is primarily used to correlate existing AFAS users and to keep account data such as the e-mail address and UPN up to date. Creating an AFAS user is optional. Account data and the account lifecycle are handled by the account lifecycle scripts; AFAS authorizations (InSite, Profit Windows, etc.) are handled as permissions, so they can be assigned with business rules.
 
+> [!WARNING]
+> Version 5.0.0 contains breaking changes and is not backward compatible with version 4.x. See [Breaking change in version 5.0.0](#breaking-change-in-version-500).
+
 ## Supported features
 
 The following features are available:
 
 | Feature                                   | Supported | Actions                                 | Remarks                                                       |
-|-------------------------------------------|-----------|-----------------------------------------|---------------------------------------------------------------|
+| ----------------------------------------- | --------- | --------------------------------------- | ------------------------------------------------------------- |
 | **Account Lifecycle**                     | ✅         | Create, Update, Enable, Disable, Delete | Create correlates; creating a user is optional (`CreateUser`) |
-| **Permissions**                           | ✅         | Grant, Revoke                           | Static list of AFAS authorizations, see [Permissions](#permissions) |
+| **Permissions**                           | ✅         | Retrieve, Grant, Revoke                 | Static, see [Permissions](#permissions)                       |
 | **Resources**                             | ❌         | -                                       |                                                               |
 | **Entitlement Import: Accounts**          | ✅         | -                                       |                                                               |
 | **Entitlement Import: Permissions**       | ✅         | -                                       |                                                               |
-| **Governance Reconciliation Resolutions** | ✅         | Disable, Delete                         | Behavior set by `DisableMode` and `DeleteMode`                |
-
-## Upgrading from version 4.x (breaking change)
-
-> [!WARNING]
-> Version 5.0.0 is **not backward compatible** with version 4.x. Do not replace the scripts of an existing 4.x target system that already has granted accounts.
-
-The following identifiers and settings have changed:
-
-| Item                      | Version 4.x                                  | Version 5.0.0                                                        |
-|---------------------------|----------------------------------------------|----------------------------------------------------------------------|
-| Account reference         | Object with the user ID (`Gebruiker`/`UsId`) | Person number `BcCo` (string)                                        |
-| Account correlation field | `Medewerker`                                 | `EmId`                                                               |
-| GetConnector              | `T4E_HelloID_Users_v2`                       | `T4E_HelloID_Target_Users`                                           |
-| AFAS authorizations       | Set in the account lifecycle scripts         | Permissions (`permissions/authorizations`)                           |
-| Configuration             | `onlyUpdateOnCorrelate`, `isDebug`           | Removed; added `DisableMode` and `DeleteMode`; `CreateUser` and `UpdateUserId` changed behavior |
-
-The scripts look up the user by `BcCo`. With an account reference of version 4.x no user is found: update and enable fail, while disable, delete and revoke treat the account as already deleted and do nothing.
-
-Because this is primarily a correlate-only connector, the upgrade is a **clean go-live** of the connector:
-
-1. Import the GetConnector [Tools4ever - HelloID - T4E_HelloID_Target_Users.gcn](./Tools4ever%20-%20HelloID%20-%20T4E_HelloID_Target_Users.gcn) in AFAS Profit and give the App connector access to it.
-2. Configure the target system with the scripts, configuration, correlation and field mapping of this version.
-3. Keep `CreateUser` disabled during the go-live, so existing AFAS users are only correlated.
-4. Run a dry run (preview) and check the correlation results before enforcing.
-5. Grant the permissions with business rules; use the permission entitlement import to compare them with the current situation in AFAS.
+| **Governance Reconciliation Resolutions** | ✅         | -                                       | Disable and delete, see [Reconciliation](#reconciliation)     |
 
 ## Getting started
-
-By using this connector you will have the ability to correlate, create and update users in the AFAS Profit system and manage their authorizations.
-
-Connecting to Profit is done using the app connector system with OAuth client credentials. Please see the following pages from the AFAS Knowledge Base for more information.
-
-[Create the APP connector](https://help.afas.nl/help/NL/SE/App_Apps_Custom_Add.htm)
-
-[Manage the APP connector](https://help.afas.nl/help/NL/SE/App_Apps_Custom_Maint.htm)
-
-[Configure OAuth on the APP connector](https://help.afas.nl/help/NL/SE/120718.htm#o136210)
 
 ### HelloID Icon URL
 
@@ -106,9 +79,8 @@ https://raw.githubusercontent.com/Tools4everBV/HelloID-Conn-Prov-Target-AFAS-Pro
 - Loaded and available AFAS GetConnectors.
 - In addition to the above get-connector, the connector also uses the following built-in Profit update-connectors:
   - KnUser
-- AFAS App Connector with access to the GetConnectors and associated views.
-  - OAuth client id
-  - OAuth client secret
+- **AFAS App Connector**:<br>
+  An App Connector with OAuth client credentials (client id and client secret) and access to the GetConnector and the `KnUser` update connector. See the AFAS Knowledge Base: [Create the APP connector](https://help.afas.nl/help/NL/SE/App_Apps_Custom_Add.htm), [Manage the APP connector](https://help.afas.nl/help/NL/SE/App_Apps_Custom_Maint.htm) and [Configure OAuth on the APP connector](https://help.afas.nl/help/NL/SE/120718.htm#o136210).
 
 > [!TIP]
 > For this connector we have created a default set [Tools4ever - HelloID - T4E_HelloID_Target_Users.gcn](./Tools4ever%20-%20HelloID%20-%20T4E_HelloID_Target_Users.gcn), which can be imported directly into the AFAS Profit environment.
@@ -124,7 +96,7 @@ https://raw.githubusercontent.com/Tools4everBV/HelloID-Conn-Prov-Target-AFAS-Pro
 The following settings are required to connect to the API.
 
 | Setting                                                | Description                                                                                                                                                                                                   | Mandatory |
-|--------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------|
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
 | Base Uri                                               | The URL to the AFAS environment REST services                                                                                                                                                                 | Yes       |
 | Client ID                                              | The OAuth client id of the AppConnector                                                                                                                                                                       | Yes       |
 | Client Secret                                          | The OAuth client secret of the AppConnector                                                                                                                                                                   | Yes       |
@@ -140,7 +112,7 @@ The following settings are required to connect to the API.
 The data collection retrieved by the set of GetConnectors is sufficient for HelloID to provision persons. The data collection can be changed by the customer itself to meet their requirements.
 
 | Connector                                          | Field               | Default filter            |
-|----------------------------------------------------|---------------------|---------------------------|
+| -------------------------------------------------- | ------------------- | ------------------------- |
 | __Tools4ever - HelloID - T4E_HelloID_Target_Users__ | contract start date | <[Vandaag + 3 maanden]    |
 |                                                    | contract end date   | >[Vandaag - 3 maanden];[] |
 
@@ -149,7 +121,7 @@ The data collection retrieved by the set of GetConnectors is sufficient for Hell
 The correlation configuration is used to specify which properties will be used to match an existing account within _AFAS Profit_ to a person in _HelloID_.
 
 | Setting                   | Value                             |
-|---------------------------|-----------------------------------|
+| ------------------------- | --------------------------------- |
 | Enable correlation        | `True`                            |
 | Person correlation field  | `PersonContext.Person.ExternalId` |
 | Account correlation field | `EmId`                            |
@@ -165,7 +137,7 @@ The field mapping can be imported by using the [_fieldMapping.json_](./fieldMapp
 > Fill in the correct customer code in the field mapping for `UsId`.
 
 | Field  | Actions                 | Purpose                                                                                       |
-|--------|-------------------------|-----------------------------------------------------------------------------------------------|
+| ------ | ----------------------- | --------------------------------------------------------------------------------------------- |
 | `EmId` | Create                  | Correlation on the employee number                                                            |
 | `EmAd` | Create, Update, Delete  | Business e-mail address during employment and the value after employment                      |
 | `Upn`  | Create, Update, Delete  | Login name / UPN during employment and the value after employment                             |
@@ -183,7 +155,7 @@ The mutation codes (`MtCd`) of the `KnUser` update connector are: `0` block user
 Two field mappings are available. They differ only in the end state after employment:
 
 | File                                                     | Disable                                  | Delete                                                                             |
-|----------------------------------------------------------|------------------------------------------|------------------------------------------------------------------------------------|
+| -------------------------------------------------------- | ---------------------------------------- | ---------------------------------------------------------------------------------- |
 | [_fieldMapping.json_](./fieldMapping.json)               | OutSite disabled, user not blocked (`1`) | OutSite disabled, user not blocked (`1`), UPN cleared, e-mail set to the private e-mail address |
 | [_fieldMapping.option1.json_](./fieldMapping.option1.json) | OutSite disabled, user blocked and groups kept (`2`) | OutSite disabled, user blocked and groups kept (`2`), UPN and e-mail cleared |
 
@@ -195,20 +167,50 @@ The account reference is populated with the `BcCo` property (person number) from
 
 ## Remarks
 
-> [!IMPORTANT]
-> In view of GDPR, the persons private data, such as private email address and birthdate are not in the data collection by default. When needed for the implementation (e.g. set emailaddress with private email address on delete), these properties will have to be added.
+### Breaking change in version 5.0.0
 
-> [!IMPORTANT]
-> We never delete users in AFAS. The delete action only updates the user to its end state (see [Field mapping options](#field-mapping-options)).
+> [!WARNING]
+> Version 5.0.0 is **not backward compatible** with version 4.x. Do not replace the scripts of an existing 4.x target system that already has granted accounts.
 
-> [!IMPORTANT]
-> When using the permissions of this connector, set the **concurrent actions** of the target system to `1`. The AFAS `KnUser` update connector updates the user as a whole, so two simultaneous mutations on the same user will clash and can overwrite each other's changes.
+The following identifiers and settings have changed:
 
-> [!IMPORTANT]
-> A person number (`BcCo`) must resolve to a single AFAS user in the GetConnector. When multiple users are found, the action fails and the audit log lists the user IDs (`UsId`) that were found.
+| Item                      | Version 4.x                                  | Version 5.0.0                                                                                    |
+| ------------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Account reference         | Object with the user ID (`Gebruiker`/`UsId`) | Person number `BcCo` (string)                                                                    |
+| Account correlation field | `Medewerker`                                 | `EmId`                                                                                           |
+| GetConnector              | `T4E_HelloID_Users_v2`                       | `T4E_HelloID_Target_Users`                                                                       |
+| AFAS authorizations       | Set in the account lifecycle scripts         | Permissions (`permissions/authorizations`)                                                       |
+| Configuration             | `onlyUpdateOnCorrelate`, `isDebug`           | Removed; added `DisableMode` and `DeleteMode`; `CreateUser` and `UpdateUserId` changed behavior |
 
-> [!NOTE]
-> Account reference values and correlation values that contain a comma or semicolon are rejected, because AFAS uses these characters to separate filter values.
+The scripts look up the user by `BcCo`. With an account reference of version 4.x no user is found: update and enable fail, while disable, delete and revoke treat the account as already deleted and do nothing.
+
+Because this is primarily a correlate-only connector, the upgrade is a **clean go-live** of the connector:
+
+1. Import the GetConnector [Tools4ever - HelloID - T4E_HelloID_Target_Users.gcn](./Tools4ever%20-%20HelloID%20-%20T4E_HelloID_Target_Users.gcn) in AFAS Profit and give the App connector access to it.
+2. Configure the target system with the scripts, configuration, correlation and field mapping of this version.
+3. Keep `CreateUser` disabled during the go-live, so existing AFAS users are only correlated.
+4. Run a dry run (preview) and check the correlation results before enforcing.
+5. Grant the permissions with business rules; use the permission entitlement import to compare them with the current situation in AFAS.
+
+### Private data
+
+- **GDPR**: The private data of persons, such as the private e-mail address and birth date, is not in the data collection by default. When it is needed for the implementation (for example the private e-mail address on delete), these properties have to be added.
+
+### Users are never deleted
+
+- **No delete in AFAS**: The delete action only updates the user to its end state (see [Field mapping options](#field-mapping-options)).
+
+### Concurrent actions
+
+- **Set concurrent actions to 1**: When using the permissions of this connector, set the concurrent actions of the target system to `1`. The AFAS `KnUser` update connector updates the user as a whole, so two simultaneous mutations on the same user will clash and can overwrite each other's changes.
+
+### One AFAS user per person number
+
+- **Unique person number**: A person number (`BcCo`) must resolve to a single AFAS user in the GetConnector. When multiple users are found, the action fails and the audit log lists the user IDs (`UsId`) that were found.
+
+### Comma or semicolon in values
+
+- **Filter values**: Account reference values and correlation values that contain a comma or semicolon are rejected, because AFAS uses these characters to separate filter values.
 
 ### Create / correlate
 
@@ -248,7 +250,7 @@ When the account is not found, delete succeeds without changes.
 During reconciliation no field mapping data is available. The disable and delete actions then use the settings `Behavior on disable during a reconciliation action` (`DisableMode`) and `Behavior on delete during a reconciliation action` (`DeleteMode`):
 
 | Value                                       | Disable                                  | Delete                                                         |
-|---------------------------------------------|------------------------------------------|----------------------------------------------------------------|
+| ------------------------------------------- | ---------------------------------------- | -------------------------------------------------------------- |
 | `blockKeepGroupsDisableOutSite` (default)   | OutSite disabled, block and keep groups  | OutSite disabled, block and keep groups, clear e-mail and UPN  |
 | `blockRemoveGroupsDisableOutSite`           | OutSite disabled, block and remove groups | OutSite disabled, block and remove groups, clear e-mail and UPN |
 | `enableOutSiteNoBlock`                      | OutSite enabled, no block                | OutSite enabled, no block, clear UPN and keep e-mail           |
@@ -261,7 +263,7 @@ During reconciliation no field mapping data is available. The disable and delete
 The permissions are a static list of AFAS authorizations on the user. Grant sets the field to `true`, revoke sets it to `false`. The permission reference is the AFAS field name.
 
 | Permission                       | Reference |
-|----------------------------------|-----------|
+| -------------------------------- | --------- |
 | InSite access                    | `InSi`    |
 | Profit Windows access            | `Awin`    |
 | Activate collaboration license   | `OcUs`    |
@@ -284,7 +286,7 @@ When the account is not found, grant fails and revoke succeeds without changes. 
 The following endpoints are used by the connector.
 
 | Endpoint                      | HTTP Method | Description                        |
-|-------------------------------|-------------|------------------------------------|
+| ----------------------------- | ----------- | ---------------------------------- |
 | profitrestservices/oauth/token | POST       | Retrieve an OAuth access token     |
 | profitrestservices/connectors | GET         | Retrieve user information          |
 | profitrestservices/connectors | POST        | Create a user                      |
