@@ -78,7 +78,7 @@
   {
     "key": "DisableMode",
     "type": "select",
-    "defaultValue": "enableOutSiteNoBlock",
+    "defaultValue": "blockKeepGroupsDisableOutSite",
     "templateOptions": {
       "label": "Behavior on disable during a reconciliation action",
       "description": "Applies only when disable is triggered by reconciliation (e.g. the account was removed from the source but still exists in AFAS). A regular disable action uses the field mapping instead. Choose how block status, group memberships, and OutSite are handled.",
@@ -102,7 +102,7 @@
   {
     "key": "DeleteMode",
     "type": "select",
-    "defaultValue": "enableOutSiteNoBlock",
+    "defaultValue": "blockKeepGroupsDisableOutSite",
     "templateOptions": {
       "label": "Behavior on delete during a reconciliation action",
       "description": "Applies only when delete is triggered by reconciliation (e.g. the account was removed from the source but still exists in AFAS). Choose how block status, group memberships, and OutSite are handled.",
