@@ -78,8 +78,8 @@ try {
         @{ DisplayName = 'AFAS Accept'; Reference = 'AcUs' }
     )
 
-    #Filter - Determine what defines an account entitlement, copy from AFAS Connect cURL
-    $filter = 'filterfieldids=UsId&filtervalues=%5Bis%20niet%20leeg%5D&operatortypes=9'
+    #Filter - Determine what defines an account entitlement, copy from AFAS Connect cURL. A user with a Upn is considered an account.
+    $Filter = "filterfieldids=BcCo,Upn&filtervalues=%5Bis%20niet%20leeg%5D,%5Bis%20niet%20leeg%5D&operatortypes=9,9"
 
     # Create authorization headers using OAuth client credentials
     $tokenUri = "$($actionContext.Configuration.BaseUri)/oauth/token"

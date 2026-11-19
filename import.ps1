@@ -67,8 +67,8 @@ function Resolve-AFASProfitError {
 #endregion functions
 
 try {
-    #Filter - Determine what defines an account entitlement, copy from AFAS Connect cURL
-    $Filter = "filterfieldids=UsId&filtervalues=%5Bis%20niet%20leeg%5D&operatortypes=9"
+    #Filter - Determine what defines an account entitlement, copy from AFAS Connect cURL. A user with a Upn is considered an account.
+    $Filter = "filterfieldids=BcCo,Upn&filtervalues=%5Bis%20niet%20leeg%5D,%5Bis%20niet%20leeg%5D&operatortypes=9,9"
 
     Write-Information "Starting AFAS Users account entitlement import through get-connector [$($actionContext.Configuration.GetConnector)]"
 
