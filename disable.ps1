@@ -132,7 +132,7 @@ try {
                 }
             }
             else {
-                # Reconciliation fallback for disable behavior when no mapping data is available.
+                # Reconciliation fallback for disable behavior when no mapping data is available. Disable always blocks the user, so the next account import returns the user as disabled.
                 $disableMode = [string]$actionContext.Configuration.DisableMode
                 switch ($disableMode) {
                     'blockKeepGroupsDisableOutSite' {
@@ -143,10 +143,6 @@ try {
                     'blockRemoveGroupsDisableOutSite' {
                         $fieldsToUpdate['Site'] = 'false'
                         $fieldsToUpdate['MtCd'] = 0
-                        break
-                    }
-                    'enableOutSiteNoBlock' {
-                        $fieldsToUpdate['Site'] = 'true'
                         break
                     }
                     default {

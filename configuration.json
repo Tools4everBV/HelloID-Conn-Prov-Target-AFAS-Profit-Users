@@ -81,42 +81,14 @@
     "defaultValue": "blockKeepGroupsDisableOutSite",
     "templateOptions": {
       "label": "Behavior on disable during a reconciliation action",
-      "description": "Applies only when disable is triggered by reconciliation (e.g. the account was removed from the source but still exists in AFAS). A regular disable action uses the field mapping instead. Choose how block status, group memberships, and OutSite are handled.",
+      "description": "Applies only when disable is triggered by reconciliation. A regular disable action uses the field mapping instead. The user is always blocked and OutSite is disabled; choose whether group memberships are kept or removed.",
       "options": [
-        {
-          "label": "OutSite enabled, no block",
-          "value": "enableOutSiteNoBlock"
-        },
         {
           "label": "Block user and keep groups, OutSite disabled",
           "value": "blockKeepGroupsDisableOutSite"
         },
         {
           "label": "Block user and remove groups, OutSite disabled",
-          "value": "blockRemoveGroupsDisableOutSite"
-        }
-      ],
-      "required": true
-    }
-  },
-  {
-    "key": "DeleteMode",
-    "type": "select",
-    "defaultValue": "blockKeepGroupsDisableOutSite",
-    "templateOptions": {
-      "label": "Behavior on delete during a reconciliation action",
-      "description": "Applies only when delete is triggered by reconciliation (e.g. the account was removed from the source but still exists in AFAS). Choose how block status, group memberships, and OutSite are handled.",
-      "options": [
-        {
-          "label": "OutSite enabled, no block, keep email as is",
-          "value": "enableOutSiteNoBlock"
-        },
-        {
-          "label": "Block user and keep groups, OutSite disabled, clear email and upn",
-          "value": "blockKeepGroupsDisableOutSite"
-        },
-        {
-          "label": "Block user and remove groups, OutSite disabled, clear email and upn",
           "value": "blockRemoveGroupsDisableOutSite"
         }
       ],

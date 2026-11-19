@@ -10,7 +10,7 @@ This is a breaking release: the account reference, the correlation field and the
 
 - Added permissions for the AFAS authorizations InSite access (`InSi`), Profit Windows access (`Awin`), Activate collaboration license (`OcUs`), AFAS Online Portal administrator (`PoMa`) and AFAS Accept (`AcUs`) in `permissions/authorizations`
 - Added permission entitlement import (`importPermissions.ps1`)
-- Added configuration settings `DisableMode` and `DeleteMode` for disable and delete during reconciliation (default: block the user, keep groups and disable OutSite)
+- Added configuration setting `DisableMode` for disable during reconciliation: block the user and disable OutSite, and keep (default) or remove groups
 - Added GetConnector `Tools4ever - HelloID - T4E_HelloID_Target_Users.gcn`
 - Added alternative field mapping `fieldMapping.option2.json` that does not block former employees, clears UPN and sets e-mail to the private e-mail address
 - Default field mapping blocks former employees, keeps their groups and clears e-mail and UPN
@@ -28,6 +28,8 @@ This is a breaking release: the account reference, the correlation field and the
 - Create fails with a clear message when the mapped `UsId` is empty
 - Boolean fields from the GetConnector are also evaluated correctly when they are returned as text
 - Actions fail when a person number resolves to multiple AFAS users
+- Delete fails when it is triggered by reconciliation; only disable is supported as a reconciliation resolution
+- Import returns users with a person number (`BcCo`) and a UPN (`Upn`) instead of users with a user ID (`UsId`)
 - Rewrote all scripts according to the PowerShell V2 target template 4.2.0
 
 ### Removed

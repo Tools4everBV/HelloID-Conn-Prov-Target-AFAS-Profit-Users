@@ -32,6 +32,7 @@
     - [Create / correlate](#create--correlate)
     - [Update](#update)
     - [Reconciliation](#reconciliation)
+    - [Import](#import)
     - [Permissions](#permissions)
   - [Development resources](#development-resources)
     - [API endpoints](#api-endpoints)
@@ -59,7 +60,7 @@ The following features are available:
 | **Resources**                             | ❌         | -                                       |                                                               |
 | **Entitlement Import: Accounts**          | ✅         | -                                       |                                                               |
 | **Entitlement Import: Permissions**       | ✅         | -                                       |                                                               |
-| **Governance Reconciliation Resolutions** | ✅         | -                                       | Disable and delete, see [Reconciliation](#reconciliation)     |
+| **Governance Reconciliation Resolutions** | ✅         | Disable                                 | Disable only, see [Reconciliation](#reconciliation)           |
 
 ## Getting started
 
@@ -94,8 +95,7 @@ The following settings are required to connect to the API.
 | UpdateConnector                                        | The UpdateConnector in AFAS to update the user with. Default: `KnUser`                                                                                                                                        | Yes       |
 | Update User ID after correlation                       | When toggled, the User ID (`UsId`) is changed to the mapped value when it differs, only in the update that directly follows the correlation. **This is not advised, as it can break links in AFAS. Consult AFAS first.** | No        |
 | Create user when Medewerker has no User ID             | When toggled, the create action creates a new AFAS user when the correlated employee has no User ID. When not toggled, the create action fails for such an employee (correlate only).                         | No        |
-| Behavior on disable during a reconciliation action     | How a disable triggered by reconciliation handles the block status, groups and OutSite. Default: block the user, keep groups and disable OutSite. See [Reconciliation](#reconciliation).                       | Yes       |
-| Behavior on delete during a reconciliation action      | How a delete triggered by reconciliation handles the block status, groups, OutSite, e-mail and UPN. Default: block the user, keep groups, disable OutSite and clear e-mail and UPN. See [Reconciliation](#reconciliation). | Yes       |
+| Behavior on disable during a reconciliation action     | A disable triggered by reconciliation always blocks the user and disables OutSite. Choose whether groups are kept (default) or removed. See [Reconciliation](#reconciliation).                                   | Yes       |
 
 #### Scope
 
@@ -192,13 +192,17 @@ The update action only sends the changed fields. An empty (`""`) or `null` mappe
 
 ### Reconciliation
 
-During reconciliation no field mapping data is available, so disable and delete use the settings `DisableMode` and `DeleteMode`:
+- **Disable only**: This is a correlate-only connector, so AFAS users are never deleted, and a user that is not managed by HelloID cannot be reliably distinguished from a user outside the scope of HelloID. Only disable is supported as a reconciliation resolution, because blocking the user is the opposite of enable and the next account import returns the user as disabled. A delete triggered by reconciliation fails with an error.
+- **Disable behavior**: During reconciliation no field mapping data is available, so disable uses the setting `DisableMode`:
 
-| Value                                     | Disable                                   | Delete                                                          |
-| ----------------------------------------- | ----------------------------------------- | --------------------------------------------------------------- |
-| `blockKeepGroupsDisableOutSite` (default) | OutSite disabled, block and keep groups   | OutSite disabled, block and keep groups, clear e-mail and UPN   |
-| `blockRemoveGroupsDisableOutSite`         | OutSite disabled, block and remove groups | OutSite disabled, block and remove groups, clear e-mail and UPN |
-| `enableOutSiteNoBlock`                    | OutSite enabled, no block                 | OutSite enabled, no block, clear UPN and keep e-mail            |
+| Value                                     | Disable                                   |
+| ----------------------------------------- | ----------------------------------------- |
+| `blockKeepGroupsDisableOutSite` (default) | OutSite disabled, block and keep groups   |
+| `blockRemoveGroupsDisableOutSite`         | OutSite disabled, block and remove groups |
+
+### Import
+
+The account entitlement import is used for reconciliation, entitlement import and rule mining. It returns every user in the GetConnector with a person number (`BcCo`) and a UPN (`Upn`). A user without a UPN is not an account, because both field mappings clear `Upn` on delete. When the delete mapping is changed, the import filter must match the end state of the delete action. `Enabled` is the opposite of the block status (`Bl`).
 
 ### Permissions
 

@@ -58,6 +58,11 @@ try {
         throw 'Account reference contains a comma or semicolon, which cannot be used in AFAS filter values'
     }
 
+    # Reconciliation delete is not supported. AFAS users are never deleted, and a user that is not managed by HelloID cannot be reliably distinguished from a user outside the scope of HelloID. Use disable to block the user.
+    if ($actionContext.Origin -eq 'reconciliation') {
+        throw 'Delete triggered by reconciliation is not supported for this connector. AFAS users are never deleted; use disable to block the user.'
+    }
+
     Write-Information 'Verifying if an AFAS Profit account exists'
 
     # Create authorization headers using OAuth client credentials
@@ -105,9 +110,6 @@ try {
         if ([string]::IsNullOrWhiteSpace([string]$correlatedAccount.UsId)) {
             throw 'Correlated AFAS user is missing required identifier [Gebruiker/UsId]. Verify the AFAS GetConnector output.'
         }
-
-        $deleteMode = [string]$actionContext.Configuration.DeleteMode
-
     }
     elseif ($correlatedAccount.Count -gt 1) {
         throw "Multiple AFAS Profit users found for person number [$($actionContext.References.Account)]: [$(@($correlatedAccount.UsId) -join ', ')]"
@@ -131,44 +133,8 @@ try {
                 MtCd = 1 # Import without changing the block status
             }
 
-            if ($actionContext.Origin -ne 'reconciliation') {
-                foreach ($property in $actionContext.Data.PSObject.Properties) {
-                    $fieldsToUpdate[$property.Name] = $property.Value
-                }
-            }
-
-            # We can only support certain actions during reconciliation.
-            if ($actionContext.Origin -eq 'reconciliation') {
-                # AFAS clears text fields with an empty string, not with JSON null.
-                if ($deleteMode -in @('blockKeepGroupsDisableOutSite', 'blockRemoveGroupsDisableOutSite')) {
-                    $fieldsToUpdate['EmAd'] = ''
-                    $fieldsToUpdate['Upn'] = ''
-                }
-                else {
-                    $fieldsToUpdate['Upn'] = ''
-                }
-            }
-
-            if ($actionContext.Origin -eq 'reconciliation') {
-                switch ($deleteMode) {
-                    'blockKeepGroupsDisableOutSite' {
-                        $fieldsToUpdate['Site'] = 'false'
-                        $fieldsToUpdate['MtCd'] = 2
-                        break
-                    }
-                    'blockRemoveGroupsDisableOutSite' {
-                        $fieldsToUpdate['Site'] = 'false'
-                        $fieldsToUpdate['MtCd'] = 0
-                        break
-                    }
-                    'enableOutSiteNoBlock' {
-                        $fieldsToUpdate['Site'] = 'true'
-                        break
-                    }
-                    default {
-                        throw "Unsupported DeleteMode value [$deleteMode]"
-                    }
-                }
+            foreach ($property in $actionContext.Data.PSObject.Properties) {
+                $fieldsToUpdate[$property.Name] = $property.Value
             }
 
             $updateAccount = [PSCustomObject]@{
