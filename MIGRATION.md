@@ -9,14 +9,14 @@ Pull request: [#34](https://github.com/Tools4everBV/HelloID-Conn-Prov-Target-AFA
 
 ### What has changed
 
-| Item                      | Version 4.x                                  | Version 5.0.0                                                                                    |
-| ------------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| Account reference         | Object with the user ID (`Gebruiker`/`UsId`) | Person number `BcCo` (string)                                                                    |
-| Account correlation field | `Medewerker`                                 | `EmId`                                                                                           |
-| GetConnector              | `T4E_HelloID_Users_v2`                       | `T4E_HelloID_Target_Users`                                                                       |
-| AFAS authorizations       | Set in the account lifecycle scripts         | Permissions (`permissions/authorizations`)                                                       |
-| Configuration             | `onlyUpdateOnCorrelate`, `isDebug`           | Removed; added `DisableMode`; `CreateUser` and `UpdateUserId` changed behavior                   |
-| Reconciliation            | Not documented                               | Only disable is supported; a delete triggered by reconciliation fails                            |
+| Item                      | Version 4.x                                  | Version 5.0.0                                                                  |
+| ------------------------- | -------------------------------------------- | ------------------------------------------------------------------------------ |
+| Account reference         | Object with the user ID (`Gebruiker`/`UsId`) | Person number `BcCo` (string)                                                  |
+| Account correlation field | `Medewerker`                                 | `EmId`                                                                         |
+| GetConnector              | `T4E_HelloID_Users_v2`                       | `T4E_HelloID_Target_Users`                                                     |
+| AFAS authorizations       | Set in the account lifecycle scripts         | Permissions (`permissions/authorizations`)                                     |
+| Configuration             | `onlyUpdateOnCorrelate`, `isDebug`           | Removed; added `DisableMode`; `CreateUser` and `UpdateUserId` changed behavior |
+| Reconciliation            | Not documented                               | Only disable is supported; a delete triggered by reconciliation fails          |
 
 The scripts look up the user by `BcCo`. With an account reference of version 4.x no user is found: update and enable fail, while disable, delete and revoke treat the account as already deleted and do nothing.
 

@@ -82,7 +82,17 @@ try {
         client_secret = $actionContext.Configuration.ClientSecret
     }
 
-    $tokenResponse = Invoke-RestMethod -Method Post -Uri $tokenUri -Body $tokenRequestBody -ContentType 'application/x-www-form-urlencoded' -UseBasicParsing -ErrorAction Stop -Verbose:$false
+    $splatTokenParams = @{
+        Uri             = $tokenUri
+        Method          = 'POST'
+        Body            = $tokenRequestBody
+        ContentType     = 'application/x-www-form-urlencoded'
+        UseBasicParsing = $true
+        ErrorAction     = 'Stop'
+        Verbose         = $false
+    }
+
+    $tokenResponse = Invoke-RestMethod @splatTokenParams
 
     if ([String]::IsNullOrWhiteSpace([String]$tokenResponse.access_token)) {
         throw 'OAuth token endpoint did not return an access_token.'
@@ -104,8 +114,17 @@ try {
     $processedAccountReferences = [System.Collections.Generic.HashSet[string]]::new()
 
     do {
-        $uri = "$($actionContext.Configuration.BaseUri)/connectors/$($actionContext.Configuration.GetConnector)?$Filter&skip=$skip&take=$take&orderbyfieldids=UsId"
-        $dataset = Invoke-RestMethod -Method Get -Uri $uri -Headers $Headers -ContentType 'application/json;charset=utf-8' -UseBasicParsing -ErrorAction Stop
+        $splatQueryParams = @{
+            Uri             = "$($actionContext.Configuration.BaseUri)/connectors/$($actionContext.Configuration.GetConnector)?$Filter&skip=$skip&take=$take&orderbyfieldids=UsId"
+            Headers         = $Headers
+            Method          = 'GET'
+            ContentType     = 'application/json;charset=utf-8'
+            UseBasicParsing = $true
+            ErrorAction     = 'Stop'
+            Verbose         = $false
+        }
+
+        $dataset = Invoke-RestMethod @splatQueryParams
         $downloadedRecordCount += @($dataset.rows).Count
 
         foreach ($importedAccount in $dataset.rows) {

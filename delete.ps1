@@ -75,7 +75,17 @@ try {
         client_secret = $actionContext.Configuration.ClientSecret
     }
 
-    $tokenResponse = Invoke-RestMethod -Method Post -Uri $tokenUri -Body $tokenRequestBody -ContentType 'application/x-www-form-urlencoded' -UseBasicParsing -ErrorAction Stop -Verbose:$false
+    $splatTokenParams = @{
+        Uri             = $tokenUri
+        Method          = 'POST'
+        Body            = $tokenRequestBody
+        ContentType     = 'application/x-www-form-urlencoded'
+        UseBasicParsing = $true
+        ErrorAction     = 'Stop'
+        Verbose         = $false
+    }
+
+    $tokenResponse = Invoke-RestMethod @splatTokenParams
 
     if ([String]::IsNullOrWhiteSpace([String]$tokenResponse.access_token)) {
         throw "OAuth token endpoint did not return an access_token."
@@ -97,6 +107,7 @@ try {
         ContentType     = 'application/json;charset=utf-8'
         UseBasicParsing = $true
         ErrorAction     = 'Stop'
+        Verbose         = $false
     }
 
     $correlatedAccount = @((Invoke-RestMethod @splatQueryParams).rows)
@@ -156,11 +167,12 @@ try {
                 ContentType     = 'application/json;charset=utf-8'
                 UseBasicParsing = $true
                 ErrorAction     = 'Stop'
+                Verbose         = $false
             }
             
             if (-not($actionContext.DryRun -eq $true)) {
                 Write-Information "Deleting AFAS Profit account with accountReference: [$($actionContext.References.Account)]. Update payload fields: [$fieldsInPayload]"
-                $null = Invoke-RestMethod @splatUpdateParams -Verbose:$false
+                $null = Invoke-RestMethod @splatUpdateParams
                 $auditLogMessage = "Delete AFAS Profit account with accountReference: [$($actionContext.References.Account)] was successful. Update payload fields: [$fieldsInPayload]"
             }
             else {

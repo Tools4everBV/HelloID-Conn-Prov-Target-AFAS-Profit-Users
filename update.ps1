@@ -97,10 +97,11 @@ function Invoke-AFASUserUpdate {
         ContentType     = 'application/json;charset=utf-8'
         UseBasicParsing = $true
         ErrorAction     = 'Stop'
+        Verbose         = $false
     }
 
     Write-Information "Updating AFAS Profit account with accountReference: [$AccountReference]"
-    $null = Invoke-RestMethod @splatUpdateParams -Verbose:$false
+    $null = Invoke-RestMethod @splatUpdateParams
 }
 #endregion
 
@@ -125,7 +126,17 @@ try {
         client_secret = $actionContext.Configuration.ClientSecret
     }
 
-    $tokenResponse = Invoke-RestMethod -Method Post -Uri $tokenUri -Body $tokenRequestBody -ContentType 'application/x-www-form-urlencoded' -UseBasicParsing -ErrorAction Stop -Verbose:$false
+    $splatTokenParams = @{
+        Uri             = $tokenUri
+        Method          = 'POST'
+        Body            = $tokenRequestBody
+        ContentType     = 'application/x-www-form-urlencoded'
+        UseBasicParsing = $true
+        ErrorAction     = 'Stop'
+        Verbose         = $false
+    }
+
+    $tokenResponse = Invoke-RestMethod @splatTokenParams
 
     if ([String]::IsNullOrWhiteSpace([String]$tokenResponse.access_token)) {
         throw 'OAuth token endpoint did not return an access_token.'
@@ -147,6 +158,7 @@ try {
         ContentType     = 'application/json;charset=utf-8'
         UseBasicParsing = $true
         ErrorAction     = 'Stop'
+        Verbose         = $false
     }
 
     $correlatedAccount = @((Invoke-RestMethod @splatQueryParams).rows)
@@ -234,7 +246,15 @@ try {
                 }
 
                 if (-not($actionContext.DryRun -eq $true)) {
-                    Invoke-AFASUserUpdate -CurrentUsId $currentUsId -Name $correlatedAccount.Nm -FieldsToUpdate $fieldsToUpdate -Headers $headers -AccountReference $actionContext.References.Account
+                    $splatUserUpdateParams = @{
+                        CurrentUsId      = $currentUsId
+                        Name             = $correlatedAccount.Nm
+                        FieldsToUpdate   = $fieldsToUpdate
+                        Headers          = $headers
+                        AccountReference = $actionContext.References.Account
+                    }
+
+                    Invoke-AFASUserUpdate @splatUserUpdateParams
                 }
                 else {
                     Write-Information "[DryRun] Update AFAS Profit account UsId with accountReference: [$($actionContext.References.Account)], will be executed during enforcement"
@@ -268,7 +288,15 @@ try {
                 }
 
                 if (-not($actionContext.DryRun -eq $true)) {
-                    Invoke-AFASUserUpdate -CurrentUsId $currentUsId -Name $correlatedAccount.Nm -FieldsToUpdate $fieldsToUpdate -Headers $headers -AccountReference $actionContext.References.Account
+                    $splatUserUpdateParams = @{
+                        CurrentUsId      = $currentUsId
+                        Name             = $correlatedAccount.Nm
+                        FieldsToUpdate   = $fieldsToUpdate
+                        Headers          = $headers
+                        AccountReference = $actionContext.References.Account
+                    }
+
+                    Invoke-AFASUserUpdate @splatUserUpdateParams
                 }
                 else {
                     Write-Information "[DryRun] Update AFAS Profit account with accountReference: [$($actionContext.References.Account)], will be executed during enforcement"

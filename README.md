@@ -1,5 +1,11 @@
 # HelloID-Conn-Prov-Target-AFAS-Profit-Users
 
+> [!WARNING]
+> Version 4.0.0 contains a different authentication method. The migration runbook can be found here: [issue #31](https://github.com/Tools4everBV/HelloID-Conn-Prov-Target-AFAS-Profit-Users/issues/31).
+
+> [!WARNING]
+> Version 5.0.0 contains breaking changes and is not backward compatible with version 4.x. See [MIGRATION.md](./MIGRATION.md).
+
 > [!IMPORTANT]
 > This repository contains the connector and configuration code only. The implementer is responsible to acquire the connection details such as username, password, certificate, etc. You might even need to sign a contract or agreement with the supplier before implementing this connector. Please contact the client's application manager to coordinate the connector requirements.
 
@@ -46,9 +52,6 @@ _HelloID-Conn-Prov-Target-AFAS-Profit-Users_ is a _target_ connector. _AFAS-Prof
 
 The connector is primarily used to correlate existing AFAS users and to keep account data such as the e-mail address and UPN up to date. Creating an AFAS user is optional. Account data and the account lifecycle are handled by the account lifecycle scripts; AFAS authorizations (InSite, Profit Windows, etc.) are handled as permissions, so they can be assigned with business rules.
 
-> [!WARNING]
-> Version 5.0.0 contains breaking changes and is not backward compatible with version 4.x. See [MIGRATION.md](./MIGRATION.md).
-
 ## Supported features
 
 The following features are available:
@@ -86,25 +89,25 @@ https://raw.githubusercontent.com/Tools4everBV/HelloID-Conn-Prov-Target-AFAS-Pro
 
 The following settings are required to connect to the API.
 
-| Setting                                                | Description                                                                                                                                                                                                   | Mandatory |
-| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
-| Base Uri                                               | The URL to the AFAS environment REST services                                                                                                                                                                 | Yes       |
-| Client ID                                              | The OAuth client id of the AppConnector                                                                                                                                                                       | Yes       |
-| Client Secret                                          | The OAuth client secret of the AppConnector                                                                                                                                                                   | Yes       |
-| GetConnector                                           | The GetConnector in AFAS to query the user with. Default: `T4E_HelloID_Target_Users`                                                                                                                          | Yes       |
-| UpdateConnector                                        | The UpdateConnector in AFAS to update the user with. Default: `KnUser`                                                                                                                                        | Yes       |
-| Update User ID after correlation                       | When toggled, the User ID (`UsId`) is changed to the mapped value when it differs, only in the update that directly follows the correlation. **This is not advised, as it can break links in AFAS. Consult AFAS first.** | No        |
-| Create user when Medewerker has no User ID             | When toggled, the create action creates a new AFAS user when the correlated employee has no User ID. When not toggled, the create action fails for such an employee (correlate only).                         | No        |
-| Behavior on disable during a reconciliation action     | A disable triggered by reconciliation always blocks the user and disables OutSite. Choose whether groups are kept (default) or removed. See [Reconciliation](#reconciliation).                                   | Yes       |
+| Setting                                            | Description                                                                                                                                                                                                              | Mandatory |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------- |
+| Base Uri                                           | The URL to the AFAS environment REST services                                                                                                                                                                            | Yes       |
+| Client ID                                          | The OAuth client id of the AppConnector                                                                                                                                                                                  | Yes       |
+| Client Secret                                      | The OAuth client secret of the AppConnector                                                                                                                                                                              | Yes       |
+| GetConnector                                       | The GetConnector in AFAS to query the user with. Default: `T4E_HelloID_Target_Users`                                                                                                                                     | Yes       |
+| UpdateConnector                                    | The UpdateConnector in AFAS to update the user with. Default: `KnUser`                                                                                                                                                   | Yes       |
+| Update User ID after correlation                   | When toggled, the User ID (`UsId`) is changed to the mapped value when it differs, only in the update that directly follows the correlation. **This is not advised, as it can break links in AFAS. Consult AFAS first.** | No        |
+| Create user when Medewerker has no User ID         | When toggled, the create action creates a new AFAS user when the correlated employee has no User ID. When not toggled, the create action fails for such an employee (correlate only).                                    | No        |
+| Behavior on disable during a reconciliation action | A disable triggered by reconciliation always blocks the user and disables OutSite. Choose whether groups are kept (default) or removed. See [Reconciliation](#reconciliation).                                           | Yes       |
 
 #### Scope
 
 The data collection retrieved by the set of GetConnectors is sufficient for HelloID to provision persons. The data collection can be changed by the customer itself to meet their requirements.
 
-| Connector                                          | Field               | Default filter            |
-| -------------------------------------------------- | ------------------- | ------------------------- |
+| Connector                                           | Field               | Default filter            |
+| --------------------------------------------------- | ------------------- | ------------------------- |
 | __Tools4ever - HelloID - T4E_HelloID_Target_Users__ | contract start date | <[Vandaag + 3 maanden]    |
-|                                                    | contract end date   | >[Vandaag - 3 maanden];[] |
+|                                                     | contract end date   | >[Vandaag - 3 maanden];[] |
 
 ### Correlation configuration
 
@@ -126,15 +129,15 @@ The field mapping can be imported by using the [_fieldMapping.json_](./fieldMapp
 > [!NOTE]
 > Fill in the correct customer code in the field mapping for `UsId`.
 
-| Field  | Actions                 | Purpose                                                                                       |
-| ------ | ----------------------- | --------------------------------------------------------------------------------------------- |
-| `EmId` | Create                  | Correlation on the employee number                                                            |
-| `EmAd` | Create, Update, Delete  | Business e-mail address during employment and the value after employment                      |
-| `Upn`  | Create, Update, Delete  | Login name / UPN during employment and the value after employment                             |
-| `UsId` | Create, Update          | AFAS user ID; only changed by update when `Update User ID after correlation` is toggled       |
-| `BcCo` | Create, Update          | Person number and account reference; filled by the scripts from AFAS, not by the mapping      |
-| `Site` | Enable, Disable, Delete | OutSite. `EmAd` is required to enable OutSite                                                 |
-| `MtCd` | Enable, Disable, Delete | AFAS mutation code that sets the block status and group behavior                              |
+| Field  | Actions                 | Purpose                                                                                  |
+| ------ | ----------------------- | ---------------------------------------------------------------------------------------- |
+| `EmId` | Create                  | Correlation on the employee number                                                       |
+| `EmAd` | Create, Update, Delete  | Business e-mail address during employment and the value after employment                 |
+| `Upn`  | Create, Update, Delete  | Login name / UPN during employment and the value after employment                        |
+| `UsId` | Create, Update          | AFAS user ID; only changed by update when `Update User ID after correlation` is toggled  |
+| `BcCo` | Create, Update          | Person number and account reference; filled by the scripts from AFAS, not by the mapping |
+| `Site` | Enable, Disable, Delete | OutSite. `EmAd` is required to enable OutSite                                            |
+| `MtCd` | Enable, Disable, Delete | AFAS mutation code that sets the block status and group behavior                         |
 
 The mutation codes (`MtCd`) of the `KnUser` update connector are: `0` block user and remove groups, `1` update user, `2` block user and keep groups, `3` update user, `4` change user ID (handled by the update script, do not map), `5` change password (do not map), `6` unblock user. When `MtCd` is not mapped, the scripts use `1`.
 
@@ -144,10 +147,10 @@ The mutation codes (`MtCd`) of the `KnUser` update connector are: `0` block user
 
 Two field mappings are available. They differ only in the end state after employment:
 
-| File                                                     | Disable                                  | Delete                                                                             |
-| -------------------------------------------------------- | ---------------------------------------- | ---------------------------------------------------------------------------------- |
-| [_fieldMapping.json_](./fieldMapping.json)               | OutSite disabled, user blocked and groups kept (`2`) | OutSite disabled, user blocked and groups kept (`2`), UPN and e-mail cleared |
-| [_fieldMapping.option2.json_](./fieldMapping.option2.json) | OutSite disabled, user not blocked (`1`) | OutSite disabled, user not blocked (`1`), UPN cleared, e-mail set to the private e-mail address |
+| File                                                       | Disable                                              | Delete                                                                                          |
+| ---------------------------------------------------------- | ---------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| [_fieldMapping.json_](./fieldMapping.json)                 | OutSite disabled, user blocked and groups kept (`2`) | OutSite disabled, user blocked and groups kept (`2`), UPN and e-mail cleared                    |
+| [_fieldMapping.option2.json_](./fieldMapping.option2.json) | OutSite disabled, user not blocked (`1`)             | OutSite disabled, user not blocked (`1`), UPN cleared, e-mail set to the private e-mail address |
 
 Use the default mapping when former employees must be blocked in AFAS. Use option 2 when former employees must not be blocked and keep their private e-mail address in AFAS. For the use of these AFAS settings, see the [AFAS documentation](https://help.afas.nl/help/en/SE/App_Conect_UpdDsc_KnUser.htm). Both mappings set OutSite to disabled on enable; change the `Site` mapping for enable to `true` when OutSite must be enabled for active employees.
 
@@ -217,12 +220,12 @@ The permission reference is the AFAS field name: `InSi` (InSite), `Awin` (Profit
 
 The following endpoints are used by the connector.
 
-| Endpoint                      | HTTP Method | Description                        |
-| ----------------------------- | ----------- | ---------------------------------- |
-| profitrestservices/oauth/token | POST       | Retrieve an OAuth access token     |
-| profitrestservices/connectors | GET         | Retrieve user information          |
-| profitrestservices/connectors | POST        | Create a user                      |
-| profitrestservices/connectors | PUT         | Update user information            |
+| Endpoint                       | HTTP Method | Description                    |
+| ------------------------------ | ----------- | ------------------------------ |
+| profitrestservices/oauth/token | POST        | Retrieve an OAuth access token |
+| profitrestservices/connectors  | GET         | Retrieve user information      |
+| profitrestservices/connectors  | POST        | Create a user                  |
+| profitrestservices/connectors  | PUT         | Update user information        |
 
 ### API documentation
 

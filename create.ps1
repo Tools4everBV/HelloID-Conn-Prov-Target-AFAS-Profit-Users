@@ -84,7 +84,17 @@ try {
             client_secret = $actionContext.Configuration.ClientSecret
         }
 
-        $tokenResponse = Invoke-RestMethod -Method Post -Uri $tokenUri -Body $tokenRequestBody -ContentType 'application/x-www-form-urlencoded' -UseBasicParsing -ErrorAction Stop -Verbose:$false
+        $splatTokenParams = @{
+            Uri             = $tokenUri
+            Method          = 'POST'
+            Body            = $tokenRequestBody
+            ContentType     = 'application/x-www-form-urlencoded'
+            UseBasicParsing = $true
+            ErrorAction     = 'Stop'
+            Verbose         = $false
+        }
+
+        $tokenResponse = Invoke-RestMethod @splatTokenParams
 
         if ([String]::IsNullOrWhiteSpace([String]$tokenResponse.access_token)) {
             throw "OAuth token endpoint did not return an access_token."
@@ -107,6 +117,7 @@ try {
             ContentType     = "application/json;charset=utf-8"
             UseBasicParsing = $true
             ErrorAction     = 'Stop'
+            Verbose         = $false
         }
 
         $correlatedAccount = @((Invoke-RestMethod @splatQueryParams).rows)
@@ -192,6 +203,7 @@ try {
                 ContentType     = 'application/json;charset=utf-8'
                 UseBasicParsing = $true
                 ErrorAction     = 'Stop'
+                Verbose         = $false
             }
 
             # BcCo is not mapped, so take it from AFAS. Correlate does the same by selecting it from the AFAS record.
@@ -203,7 +215,7 @@ try {
 
             if (-not($actionContext.DryRun -eq $true)) {
                 Write-Information "Creating and correlating AFAS account [$newUsId]. Fields in create payload: [$fieldsInPayload]"
-                $null = Invoke-RestMethod @splatCreateParams -Verbose:$false
+                $null = Invoke-RestMethod @splatCreateParams
 
                 $auditLogMessage = "Created and correlated AFAS account with accountReference: [$($outputContext.AccountReference)]. Create payload fields: [$fieldsInPayload]"
             }
