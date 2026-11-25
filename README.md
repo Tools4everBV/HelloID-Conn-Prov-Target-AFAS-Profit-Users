@@ -211,6 +211,8 @@ The account entitlement import is used for reconciliation, entitlement import an
 
 The permission reference is the AFAS field name: `InSi` (InSite), `Awin` (Profit Windows), `OcUs` (collaboration license), `PoMa` (AFAS Online Portal administrator) and `AcUs` (AFAS Accept).
 
+The permission import uses the same filter as the account import: only users with a person number (`BcCo`) and a UPN (`Upn`) are returned. Grant and revoke look up the user on `BcCo` only. A user without a UPN can therefore have `InSi` active in AFAS without showing up in the permission import, while a grant reports the permission as already granted. Such a user cannot log in to InSite, because there is no UPN to match on. Once the account is granted or updated and `Upn` is filled, the next permission import returns the permission.
+
 > [!IMPORTANT]
 > AFAS only allows `Awin` while `InSi` is active. Granting `Awin` fails while `InSi` is not active, and revoking `InSi` fails while `Awin` is active. Make sure that the business rules grant `InSi` whenever they grant `Awin`.
 
